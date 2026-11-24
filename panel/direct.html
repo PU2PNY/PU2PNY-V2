@@ -1,0 +1,49 @@
+<!doctype html><html lang="pt-BR" data-theme="dark" class="pny-i18n-pending"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark light"><title>PU2PNY-OS</title>
+<link rel="icon" type="image/png" href="favicon.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>(function(){document.documentElement.setAttribute('data-theme',localStorage.getItem('pu2pny-theme')||'dark')})();</script>
+<link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="pny-v2.css">
+<style>.peer{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}.peer:last-child{border-bottom:0}.peer .st{font-size:11px;color:var(--muted)}</style>
+</head><body><div class="shell">
+<header class="topnav">
+  <div class="brand"><img class="brandmark" src="favicon.png" alt="PU2PNY"><span class="brandtext"><b style="font-size:19px">PU2PNY-OS</b><small>PU2PNY Direct</small></span></div>
+  <nav class="nav" id="mainNav"></nav>
+  <div class="navtools"><span class="pill"><span id="clockLocal">--:--:--</span></span><button class="btn" id="themeToggle">☀ Claro</button></div>
+</header>
+<main class="main">
+<div class="top"><div><h1>Direct</h1><p>QSO ponto a ponto com fallback criptografado quando NAT/CGNAT impedir o caminho direto.</p></div><button class="btn" id="refresh">Atualizar agora</button></div>
+<section class="section"><div class="grid2">
+<article class="card"><h2>Estado</h2><div class="big" id="dirState">—</div><div class="rows" style="margin-top:8px">
+  <div class="row" data-real-only><span>Caminho</span><b id="path">—</b></div>
+  <div class="row" data-real-only><span>Criptografia</span><b id="enc">—</b></div>
+  <div class="row" data-real-only><span>Latência</span><b id="lat">—</b></div></div>
+  <p class="muted">Sessão ponta a ponta; o relay transporta somente pacotes já criptografados. Depois do QSO, o gateway anterior é restaurado automaticamente.</p>
+</article>
+<article class="card"><h2>Contatos pareados</h2>
+  <div class="formgrid" style="margin-bottom:10px"><div class="field"><label>Adicionar indicativo/ID</label><input id="newPeer" placeholder="Ex.: PU2ABC" autocapitalize="characters"></div><div class="field" style="align-self:end"><button class="btn" id="pair">Parear</button></div></div>
+  <div id="peers"><div class="muted">Nenhum contato.</div></div>
+  <p id="dirResult" class="statusmsg"></p>
+</article>
+</div></section>
+</main></div>
+<script src="ui-common.js"></script><script>
+PNY.nav('direct');PNY.initTheme();
+var STATE={idle:'Em repouso',calling:'Chamando',ringing:'Chamada recebida',connected:'Conectado',relay:'Relay criptografado',direct:'Conexão direta'};
+async function load(){
+  try{var d=await PNY.getj('/api/direct');PNY.q('dirState').textContent=STATE[String(d.state||'').toLowerCase()]||d.state||'Em repouso';
+    PNY.q('path').textContent=d.path==='relay'?'Relay criptografado':d.path==='direct'?'Conexão direta':(d.path||'—');
+    PNY.q('enc').textContent=d.encryption||d.cipher||'—';PNY.q('lat').textContent=d.latency_ms!=null?d.latency_ms+' ms':'—';
+  }catch(e){PNY.q('dirState').textContent='Indisponível'}
+  try{var p=await PNY.getj('/api/direct/peers'),peers=p.peers||p.contacts||[];var host=PNY.q('peers');
+    if(!peers.length){host.innerHTML='<div class="muted">Nenhum contato.</div>'}
+    else host.innerHTML=peers.map(function(x){var id=x.callsign||x.id||x.peer||'—',on=x.online||x.reachable;return '<div class="peer"><div><b>'+PNY.esc(id)+'</b><div class="st">'+(on?'disponível':'offline')+'</div></div><button class="btn" data-call="'+PNY.esc(id)+'">Chamar</button><button class="btn danger" data-hang="'+PNY.esc(id)+'">Encerrar</button></div>'}).join('');
+    host.querySelectorAll('[data-call]').forEach(function(b){b.onclick=function(){act('/api/direct/call',{peer:b.dataset.call},'Chamando '+b.dataset.call)}});
+    host.querySelectorAll('[data-hang]').forEach(function(b){b.onclick=function(){act('/api/direct/hangup',{peer:b.dataset.hang},'Encerrando a chamada')}});
+  }catch(e){}
+  PNY.sweepRealOnly(document);
+}
+async function act(url,body,title){var op=PNY.operation(title,'Aplicando com retorno automático ao gateway anterior...');try{await PNY.getj(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),pnySilent:true},20000);op.done('Concluído.');setTimeout(load,800)}catch(e){op.error(e.message);PNY.q('dirResult').textContent=e.message}}
+PNY.q('pair').onclick=function(){var id=PNY.q('newPeer').value.trim().toUpperCase();if(!id){PNY.q('dirResult').textContent='Informe o indicativo ou ID do contato.';return}act('/api/direct/pair',{peer:id},'Pareando '+id);PNY.q('newPeer').value=''};
+PNY.q('refresh').onclick=load;load();setInterval(function(){if(!document.hidden)load()},6000);
+</script></body></html>

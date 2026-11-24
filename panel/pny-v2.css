@@ -1,0 +1,62 @@
+/* PU2PNY-V2 panel — refinement layer over ui.css.
+   Additive only: never redefines the design tokens, only adds craft the base
+   stylesheet leaves open (keyboard focus, brand mark, quieter rhythm). */
+
+/* Brand mark in the top navigation: the concentric-circle favicon, sized to
+   the wordmark, so the identity reads the same on screen and on the device. */
+.brand{display:flex;align-items:center;gap:10px}
+.brandmark{width:30px;height:30px;flex:0 0 auto;border-radius:8px;display:block}
+.brandtext{display:flex;flex-direction:column;line-height:1;min-width:0}
+
+/* Visible keyboard focus on every interactive element — the base only tints
+   input borders, which leaves buttons, links and tabs with no focus signal.
+   accessibility.md › Focus and selection: keyboard-only use must be visible. */
+a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,
+textarea:focus-visible,[tabindex]:focus-visible,summary:focus-visible{
+  outline:2px solid var(--blue);outline-offset:2px;border-radius:8px}
+.nav a:focus-visible{outline-offset:-2px}
+
+/* Each RF direction on its own line in the live facts — TX and RX never share
+   a row, as required. A hairline rule separates the pair. */
+.dirlines{display:grid;gap:6px}
+.dirline{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;
+  padding:7px 0;border-bottom:1px solid var(--line)}
+.dirline:last-child{border-bottom:0}
+.dirline .tag{font-size:10px;font-weight:950;letter-spacing:.04em;padding:3px 8px;border-radius:999px;
+  border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.dirline.tx .tag{color:var(--red);border-color:color-mix(in srgb,var(--red) 55%,var(--line))}
+.dirline.rx .tag{color:var(--green);border-color:color-mix(in srgb,var(--green) 55%,var(--line))}
+.dirline .val{font-weight:850;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dirline .sub{font-size:11px;color:var(--muted);text-align:right;white-space:nowrap}
+.dirline.idle{opacity:.6}
+
+/* Connection banners — one calm line, color carries state but never alone:
+   an icon and words say connected / disconnected too. */
+.connbanner{display:flex;gap:10px;align-items:center;margin:0 0 12px;padding:10px 13px;
+  border:1px solid var(--line);border-radius:12px;background:var(--card2);font-weight:800}
+.connbanner.ok{border-color:color-mix(in srgb,var(--green) 55%,var(--line))}
+.connbanner.down{border-color:color-mix(in srgb,var(--red) 55%,var(--line))}
+.connbanner .cdot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+.connbanner.ok .cdot{background:var(--green);box-shadow:0 0 8px var(--green)}
+.connbanner.down .cdot{background:var(--red);box-shadow:0 0 8px var(--red)}
+.connbanner small{font-weight:600;color:var(--muted)}
+
+/* Segmented mode rows (Display writer, public/private) — a quiet pill group. */
+.segrow{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card2)}
+.segrow button{border:0;background:transparent;color:var(--muted);padding:9px 15px;font-weight:850;cursor:pointer}
+.segrow button.active{background:var(--card);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+.segrow button:not(:last-child){border-right:1px solid var(--line)}
+
+/* A roomier gap under page intros, so the first card breathes. layout.md. */
+.top{margin-bottom:4px}
+.section:first-of-type{margin-top:18px}
+
+/* Rotation choices as discrete tiles, matching the display preview language. */
+.rotgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:360px}
+.rotgrid button{border:1px solid var(--line);background:var(--card2);color:var(--text);
+  border-radius:12px;padding:12px 0;font-weight:900;cursor:pointer}
+.rotgrid button.active{border-color:var(--blue);color:var(--blue)}
+
+/* The i18n layer hides the body until the first translation pass, to avoid a
+   flash of Portuguese for an English reader. */
+html.pny-i18n-pending body{visibility:hidden}
