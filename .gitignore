@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+/dist/
+/output/
+*.img
+*.img.xz

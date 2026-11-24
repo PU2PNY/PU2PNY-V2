@@ -1,0 +1,15 @@
+[Unit]
+Description=PU2PNY automatic official component preparation
+After=NetworkManager.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/var/lib/2pny/auto-maintenance.enabled
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/2pny-auto-maintenance run
+Nice=15
+IOSchedulingClass=idle
+CPUWeight=20
+IOWeight=20
+MemoryMax=320M
+TimeoutStartSec=15min

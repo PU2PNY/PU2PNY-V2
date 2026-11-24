@@ -1,0 +1,116 @@
+name: PU2PNY-V2 TEST-1 image (ARMv6 / board 32)
+on:
+  push:
+    branches: [build/v2-test-1]
+    paths:
+      - '.github/workflows/v2-test-1-release.yml'
+      - 'ci/build-v2-test-1.py'
+      - 'ci/patch-image-v2-test-1.py'
+      - 'ci/prepare-v2-backend.py'
+      - 'panel/**'
+  workflow_dispatch:
+env:
+  SOURCE_COMMIT: ${{ github.sha }}
+  BOARD: '32'
+permissions:
+  contents: read
+concurrency:
+  group: pu2pny-v2-test-1-image
+  cancel-in-progress: true
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_COMMIT }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+          cache: false
+      - name: Build and test the V2 panel backend (ARMv6)
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GO111MODULE=off CGO_ENABLED=0
+          export GOOS=linux GOARCH=arm GOARM=6
+          python3 ci/prepare-v2-backend.py "$RUNNER_TEMP/backend" arm32
+          python3 ci/test-5.13.py
+          python3 ci/test-5.13.003.py
+          python3 ci/test-5.14.py
+          python3 ci/test-5.15.py
+          python3 ci/test-5.00.001-rf-access.py
+          cd "$RUNNER_TEMP/backend"
+          env -u GOOS -u GOARCH -u GOARM go test ./...
+          go build -trimpath -o "$RUNNER_TEMP/2pnyd" .
+          file "$RUNNER_TEMP/2pnyd" | grep -Eq 'ELF 32-bit.*ARM'
+          ! file "$RUNNER_TEMP/2pnyd" | grep -Eqi 'aarch64|ARM64'
+      - name: Build the V2 TEST-1 image on the proven 5.12.002 base
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq qemu-user-static binfmt-support xz-utils e2fsprogs util-linux iproute2 curl
+          sudo update-binfmts --enable qemu-arm || true
+          mkdir -p "$RUNNER_TEMP/pu2pny"
+          curl -fL --retry 5 --retry-all-errors --connect-timeout 25 \
+            "https://github.com/PU2PNY/2PNY-OS/releases/download/pu2pny-v5.12.002-p2/pu2pny-${BOARD}-5.12.002.img.xz" \
+            -o "$RUNNER_TEMP/pu2pny/pu2pny-${BOARD}-5.12.002.img.xz"
+          sudo python3 ci/build-v2-test-1.py "$RUNNER_TEMP/pu2pny" "$SOURCE_COMMIT" "$RUNNER_TEMP/2pnyd"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pu2pny-v2-test-1-32
+          path: ${{ runner.temp }}/pu2pny/output/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+  publish:
+    needs: image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_COMMIT }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: pu2pny-v2-test-1-32
+          path: artifacts
+      - name: Verify integrity and publish for physical testing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd artifacts
+          image="pu2pny-32-v2-test-1.img.xz"
+          test -s "$image"
+          xz -t "$image"
+          sha256sum -c "$image.sha256"
+          jq -e --arg sha "$SOURCE_COMMIT" \
+            '.build=="PU2PNY-V2-TEST-1" and .architecture=="32" and .source_commit==$sha and .validation.HW=="NOT_VERIFIED" and .validation.PROD=="NOT_APPROVED"' \
+            BUILD-INFO-32.json
+          cat > RELEASE-NOTES.md <<'EOF'
+          # PU2PNY-V2 — TEST-1 (ARMv6 / board 32)
+
+          **Imagem de TESTE. Não aprovada. Nada validado em hardware.**
+          Para teste físico no Raspberry Pi (Pi Zero W e demais). Grave com Rufus/Etcher.
+          AP de primeiro acesso: **PU2PNY-RPI-32**.
+
+          Base comprovada: PU2PNY-OS 5.12.002 (board 32). Backend/rede/RF herdados do 5.15.
+          Inclui: painel PU2PNY-V2; persistência de relógio (tz-apply grava /etc);
+          retry de perfil 90s→300s; YSF Revert=1 + watchdog da ponte local; voz DMR
+          desligada por padrão (sem pacote PT); timeout do display-boot.
+
+          Validação SW/CI apenas: xz, SHA-256, fsck ext4, remontagem RO, ELF 32-bit ARM,
+          setor de boot inalterado. RF/MMDVM/Nextion/duplex: NÃO verificado.
+          EOF
+          gh release create pu2pny-v2-test-1 \
+            ./pu2pny-32-v2-test-1.img.xz ./pu2pny-32-v2-test-1.img.xz.sha256 ./BUILD-INFO-32.json \
+            --repo "$GITHUB_REPOSITORY" --target "$SOURCE_COMMIT" --prerelease \
+            --title 'PU2PNY-V2 TEST-1 (ARMv6 / board 32) — imagem de teste, não aprovada' \
+            --notes-file RELEASE-NOTES.md
+          gh release view pu2pny-v2-test-1 --repo "$GITHUB_REPOSITORY" --json tagName,targetCommitish,assets
