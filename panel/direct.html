@@ -4,46 +4,92 @@
 <link rel="icon" type="image/png" href="favicon.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script>(function(){document.documentElement.setAttribute('data-theme',localStorage.getItem('pu2pny-theme')||'dark')})();</script>
 <link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="pny-v2.css">
-<style>.peer{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}.peer:last-child{border-bottom:0}.peer .st{font-size:11px;color:var(--muted)}</style>
-</head><body><div class="shell">
+<style>
+.peer{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}.peer:last-child{border-bottom:0}.peer .st{font-size:11px;color:var(--muted)}
+.group{border:1px solid var(--line);border-radius:14px;background:var(--card2);padding:14px;margin-bottom:12px}
+.group .ghead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.group .gname{font-weight:950;font-size:16px}
+.peerchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.peerchips .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;font-size:12px}
+.peerchips .chip .x{cursor:pointer;color:var(--muted);font-weight:900}
+.betaflag{display:inline-block;margin-left:8px;font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;border:1px solid color-mix(in srgb,var(--yellow) 55%,var(--line));color:var(--yellow);vertical-align:middle}
+</style></head><body><div class="shell">
 <header class="topnav">
   <div class="brand"><img class="brandmark" src="favicon.png" alt="PU2PNY"><span class="brandtext"><b style="font-size:19px">PU2PNY-OS</b><small>PU2PNY Direct</small></span></div>
   <nav class="nav" id="mainNav"></nav>
   <div class="navtools"><span class="pill"><span id="clockLocal">--:--:--</span></span><button class="btn" id="themeToggle">☀ Claro</button></div>
 </header>
 <main class="main">
-<div class="top"><div><h1>Direct</h1><p>QSO ponto a ponto com fallback criptografado quando NAT/CGNAT impedir o caminho direto.</p></div><button class="btn" id="refresh">Atualizar agora</button></div>
+<div class="top"><div><h1>Direct <span class="betaflag">Em preparação</span></h1><p>Fala direta entre hotspots, sem passar pelo servidor. Crie grupos privados com código secreto e chame contatos ponto a ponto.</p></div><button class="btn" id="refresh">Atualizar agora</button></div>
+
+<section class="section"><div class="notice warn">A fala direta ponto a ponto e os grupos privados dependem do motor P2P/relay no sistema do hotspot, que ainda não está disponível nesta versão. Esta tela já prepara a configuração; os botões respondem com aviso enquanto o recurso não é ativado.</div></section>
+
 <section class="section"><div class="grid2">
-<article class="card"><h2>Estado</h2><div class="big" id="dirState">—</div><div class="rows" style="margin-top:8px">
-  <div class="row" data-real-only><span>Caminho</span><b id="path">—</b></div>
-  <div class="row" data-real-only><span>Criptografia</span><b id="enc">—</b></div>
-  <div class="row" data-real-only><span>Latência</span><b id="lat">—</b></div></div>
-  <p class="muted">Sessão ponta a ponta; o relay transporta somente pacotes já criptografados. Depois do QSO, o gateway anterior é restaurado automaticamente.</p>
+<article class="card"><h2>Conexão direta ponto a ponto</h2>
+  <div class="big" id="dirState">—</div>
+  <div class="rows" style="margin-top:8px">
+    <div class="row" data-real-only><span>Meu endereço direto</span><b id="myId">—</b></div>
+    <div class="row" data-real-only><span>Caminho</span><b id="path">—</b></div>
+    <div class="row" data-real-only><span>Criptografia</span><b id="enc">—</b></div>
+    <div class="row" data-real-only><span>Latência</span><b id="lat">—</b></div>
+  </div>
+  <p class="muted">O áudio vai direto de hotspot para hotspot por UDP. Quando NAT/CGNAT bloqueia o caminho direto, o PU2PNY usa um relay autenticado mantendo a criptografia ponta a ponta. Depois do QSO, o gateway anterior é restaurado automaticamente.</p>
+
+  <h4 style="margin:14px 0 6px">Chamar um hotspot direto</h4>
+  <div class="formgrid"><div class="field"><label>Indicativo / ID do hotspot</label><input id="directTarget" autocapitalize="characters" placeholder="Ex.: PU2ABC ou ID"></div><div class="field" style="align-self:end"><div class="actions"><button class="btn primary" id="directCall">Chamar</button><button class="btn danger" id="directHang">Encerrar</button></div></div></div>
 </article>
-<article class="card"><h2>Contatos pareados</h2>
-  <div class="formgrid" style="margin-bottom:10px"><div class="field"><label>Adicionar indicativo/ID</label><input id="newPeer" placeholder="Ex.: PU2ABC" autocapitalize="characters"></div><div class="field" style="align-self:end"><button class="btn" id="pair">Parear</button></div></div>
-  <div id="peers"><div class="muted">Nenhum contato.</div></div>
-  <p id="dirResult" class="statusmsg"></p>
+
+<article class="card"><h2>Grupos privados</h2>
+  <p class="muted">Um grupo privado conecta vários hotspots com um nome e um código secreto. Só quem tem o código entra. Nenhum servidor público participa.</p>
+  <div class="formgrid" style="margin-top:10px">
+    <div class="field"><label>Nome do grupo</label><input id="gName" placeholder="Ex.: Turma 145" maxlength="32"></div>
+    <div class="field"><label>Código secreto</label><input id="gSecret" placeholder="Código compartilhado com o grupo" maxlength="64"></div>
+  </div>
+  <label>Participantes (indicativos/IDs)</label>
+  <div class="passrow"><input id="gPeerInput" placeholder="Ex.: PU2ABC" autocapitalize="characters"><button class="btn" type="button" id="gAddPeer">Adicionar</button></div>
+  <div class="peerchips" id="gPeers"></div>
+  <button class="btn primary" id="gCreate" style="margin-top:12px">Criar grupo privado</button>
+  <p id="groupResult" class="statusmsg"></p>
 </article>
 </div></section>
+
+<section class="section"><div class="sectionhead"><h2>Meus grupos e contatos</h2></div>
+  <div class="card" id="groups"><div class="muted">Nenhum grupo ou contato.</div></div>
+</section>
 </main></div>
 <script src="ui-common.js"></script><script>
 PNY.nav('direct');PNY.initTheme();
 var STATE={idle:'Em repouso',calling:'Chamando',ringing:'Chamada recebida',connected:'Conectado',relay:'Relay criptografado',direct:'Conexão direta'};
+var pendingPeers=[];
+function renderPending(){PNY.q('gPeers').innerHTML=pendingPeers.map(function(p,i){return '<span class="chip">'+PNY.esc(p)+'<span class="x" data-i="'+i+'">×</span></span>'}).join('');
+  PNY.q('gPeers').querySelectorAll('.x').forEach(function(x){x.onclick=function(){pendingPeers.splice(Number(x.dataset.i),1);renderPending()}})}
+PNY.q('gAddPeer').onclick=function(){var v=PNY.q('gPeerInput').value.trim().toUpperCase();if(v&&pendingPeers.indexOf(v)<0){pendingPeers.push(v);PNY.q('gPeerInput').value='';renderPending()}};
+async function act(url,body,title){var op=PNY.operation(title,'Aplicando com retorno automático ao gateway anterior...');try{await PNY.getj(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),pnySilent:true},20000);op.done('Concluído.');setTimeout(load,800)}catch(e){op.error(e.message)}}
+PNY.q('directCall').onclick=function(){var t=PNY.q('directTarget').value.trim().toUpperCase();if(!t){PNY.q('groupResult').textContent='Informe o indicativo/ID do hotspot a chamar.';return}act('/api/direct/call',{peer:t,mode:'direct'},'Chamando '+t)};
+PNY.q('directHang').onclick=function(){act('/api/direct/hangup',{},'Encerrando a chamada')};
+PNY.q('gCreate').onclick=function(){var name=PNY.q('gName').value.trim(),secret=PNY.q('gSecret').value.trim();
+  if(!name||!secret){PNY.q('groupResult').textContent='Informe o nome do grupo e o código secreto.';return}
+  var op=PNY.operation('Criando grupo privado','Registrando o grupo e distribuindo o código aos participantes...');
+  PNY.getj('/api/direct/group',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',name:name,secret:secret,members:pendingPeers}),pnySilent:true},20000)
+    .then(function(){op.done('Grupo criado.');PNY.q('gName').value='';PNY.q('gSecret').value='';pendingPeers=[];renderPending();setTimeout(load,800)})
+    .catch(function(e){op.error(e.message);PNY.q('groupResult').textContent=e.message})};
+function renderGroups(d){
+  var groups=d.groups||[],peers=d.peers||d.contacts||[],host=PNY.q('groups'),html='';
+  groups.forEach(function(g){var members=g.members||g.peers||[];
+    html+='<div class="group"><div class="ghead"><div class="gname">'+PNY.esc(g.name||'—')+'</div><div class="actions"><button class="btn" data-gcall="'+PNY.esc(g.name||'')+'">Chamar grupo</button><button class="btn danger" data-gdel="'+PNY.esc(g.name||'')+'">Excluir</button></div></div><div class="peerchips">'+(members.length?members.map(function(m){var id=m.callsign||m.id||m;return '<span class="chip">'+PNY.esc(id)+'</span>'}).join(''):'<span class="muted">Sem participantes</span>')+'</div></div>';
+  });
+  if(peers.length){html+='<h4 style="margin:6px 0">Contatos diretos</h4>';peers.forEach(function(x){var id=x.callsign||x.id||x.peer||'—',on=x.online||x.reachable;
+    html+='<div class="peer"><div><b>'+PNY.esc(id)+'</b><div class="st">'+(on?'disponível':'offline')+'</div></div><button class="btn" data-call="'+PNY.esc(id)+'">Chamar</button><button class="btn danger" data-hang="'+PNY.esc(id)+'">Encerrar</button></div>'})}
+  host.innerHTML=html||'<div class="muted">Nenhum grupo ou contato.</div>';
+  host.querySelectorAll('[data-call]').forEach(function(b){b.onclick=function(){act('/api/direct/call',{peer:b.dataset.call,mode:'direct'},'Chamando '+b.dataset.call)}});
+  host.querySelectorAll('[data-hang]').forEach(function(b){b.onclick=function(){act('/api/direct/hangup',{peer:b.dataset.hang},'Encerrando a chamada')}});
+  host.querySelectorAll('[data-gcall]').forEach(function(b){b.onclick=function(){act('/api/direct/call',{group:b.dataset.gcall,mode:'direct'},'Chamando o grupo '+b.dataset.gcall)}});
+  host.querySelectorAll('[data-gdel]').forEach(function(b){b.onclick=function(){if(confirm('Excluir o grupo '+b.dataset.gdel+'?'))act('/api/direct/group',{action:'delete',name:b.dataset.gdel},'Excluindo grupo')}});
+}
 async function load(){
   try{var d=await PNY.getj('/api/direct');PNY.q('dirState').textContent=STATE[String(d.state||'').toLowerCase()]||d.state||'Em repouso';
-    PNY.q('path').textContent=d.path==='relay'?'Relay criptografado':d.path==='direct'?'Conexão direta':(d.path||'—');
-    PNY.q('enc').textContent=d.encryption||d.cipher||'—';PNY.q('lat').textContent=d.latency_ms!=null?d.latency_ms+' ms':'—';
-  }catch(e){PNY.q('dirState').textContent='Indisponível'}
-  try{var p=await PNY.getj('/api/direct/peers'),peers=p.peers||p.contacts||[];var host=PNY.q('peers');
-    if(!peers.length){host.innerHTML='<div class="muted">Nenhum contato.</div>'}
-    else host.innerHTML=peers.map(function(x){var id=x.callsign||x.id||x.peer||'—',on=x.online||x.reachable;return '<div class="peer"><div><b>'+PNY.esc(id)+'</b><div class="st">'+(on?'disponível':'offline')+'</div></div><button class="btn" data-call="'+PNY.esc(id)+'">Chamar</button><button class="btn danger" data-hang="'+PNY.esc(id)+'">Encerrar</button></div>'}).join('');
-    host.querySelectorAll('[data-call]').forEach(function(b){b.onclick=function(){act('/api/direct/call',{peer:b.dataset.call},'Chamando '+b.dataset.call)}});
-    host.querySelectorAll('[data-hang]').forEach(function(b){b.onclick=function(){act('/api/direct/hangup',{peer:b.dataset.hang},'Encerrando a chamada')}});
-  }catch(e){}
+    PNY.q('myId').textContent=d.direct_id||d.my_id||'—';PNY.q('path').textContent=d.path==='relay'?'Relay criptografado':d.path==='direct'?'Conexão direta':(d.path||'—');
+    PNY.q('enc').textContent=d.encryption||d.cipher||'—';PNY.q('lat').textContent=d.latency_ms!=null?d.latency_ms+' ms':'—';renderGroups(d);
+  }catch(e){PNY.q('dirState').textContent='Indisponível';renderGroups({})}
   PNY.sweepRealOnly(document);
 }
-async function act(url,body,title){var op=PNY.operation(title,'Aplicando com retorno automático ao gateway anterior...');try{await PNY.getj(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),pnySilent:true},20000);op.done('Concluído.');setTimeout(load,800)}catch(e){op.error(e.message);PNY.q('dirResult').textContent=e.message}}
-PNY.q('pair').onclick=function(){var id=PNY.q('newPeer').value.trim().toUpperCase();if(!id){PNY.q('dirResult').textContent='Informe o indicativo ou ID do contato.';return}act('/api/direct/pair',{peer:id},'Pareando '+id);PNY.q('newPeer').value=''};
-PNY.q('refresh').onclick=load;load();setInterval(function(){if(!document.hidden)load()},6000);
+PNY.q('refresh').onclick=load;load();setInterval(function(){if(!document.hidden)load()},8000);
 </script></body></html>

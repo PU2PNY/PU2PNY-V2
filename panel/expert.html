@@ -37,6 +37,11 @@
     <div class="row"><span>Latência</span><b id="latency">—</b></div></div>
     <p><a class="btn" href="internet.html">Abrir diagnóstico de Internet</a></p></article>
 </div></section>
+<section class="section"><article class="card"><h2>Relatório completo do sistema</h2>
+  <p class="muted">Gera um único relatório com todas as verificações do sistema — hardware, RF/MMDVM, protocolos, rede, serviços, display, atualização e logs — em um arquivo para baixar e anexar em diagnósticos.</p>
+  <div class="actions" style="margin-top:10px"><button class="btn primary" id="fullReport">Gerar relatório completo</button><a class="btn hidden" id="reportDownload" download="pu2pny-relatorio-completo.txt">Baixar relatório</a></div>
+  <p id="reportResult" class="statusmsg"></p>
+</article></section>
 <section class="section"><div class="card"><h2>Detalhes técnicos</h2><details><summary>Ver JSON do estado</summary><pre id="raw" style="max-height:340px;overflow:auto;white-space:pre-wrap">Carregando...</pre></details></div></section>
 </main></div>
 <script src="ui-common.js"></script><script>
@@ -57,5 +62,21 @@ async function load(){try{var d=await PNY.getj('/api/dashboard',null,6000),t=d.t
   q('summary').innerHTML=row('Versão',d.version)+row('Indicativo',cfg.callsign)+row('Radio ID',cfg.dmr_id)+row('Protocolo',cfg.protocol)+row('Servidor',nr.server_name||cfg.server_name)+row('RX',cfg.rx_hz?(Number(cfg.rx_hz)/1e6).toFixed(6)+' MHz':'—')+row('TX',cfg.tx_hz?(Number(cfg.tx_hz)/1e6).toFixed(6)+' MHz':'—');
   q('raw').textContent=JSON.stringify({version:d.version,config:cfg,connectivity:c,hardware:h,network_runtime:nr,display_runtime:dr,telemetry:t},null,2);
 }catch(e){q('raw').textContent=e.message}}
+q('fullReport').onclick=async function(){
+  var op=PNY.operation('Gerando relatório completo','Executando todas as verificações do sistema e montando o relatório...');
+  try{
+    var r=await PNY.getj('/api/system',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'full-report'}),pnySilent:true},120000);
+    /* Accept either an inline report body or a server-provided download URL. */
+    var link=q('reportDownload');
+    if(r.download_url){link.href=r.download_url;link.removeAttribute('data-blob');link.classList.remove('hidden');op.done('Relatório pronto para baixar.')}
+    else{
+      var content=typeof r.report==='string'?r.report:JSON.stringify(r.report||r,null,2);
+      var json=typeof r.report!=='string';link.download='pu2pny-relatorio-completo.'+(json?'json':'txt');
+      var url=URL.createObjectURL(new Blob([content],{type:json?'application/json':'text/plain'}));
+      link.href=url;link.classList.remove('hidden');link.click();op.done('Relatório gerado e baixado.')
+    }
+    q('reportResult').textContent='Relatório completo gerado em '+(r.generated?PNY.fmtTime(r.generated):new Date().toLocaleString(PNY.locale()))+'.';
+  }catch(e){op.error(e.message);q('reportResult').textContent='Não foi possível gerar o relatório completo. '+e.message}
+};
 q('refresh').onclick=load;load();setInterval(function(){if(!document.hidden)load()},5000);
 </script></body></html>

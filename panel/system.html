@@ -12,25 +12,14 @@
   <div class="navtools"><span class="pill"><span id="clockLocal">--:--:--</span></span><button class="btn" id="themeToggle">☀ Claro</button></div>
 </header>
 <main class="main">
-<div class="top"><div><h1>Sistema</h1><p>Relógio, operação do rádio, atualizações e energia.</p></div><span class="badge">Versão <b id="version">—</b></span></div>
+<div class="top"><div><h1>Sistema</h1><p>Operação do rádio, atualizações e energia.</p></div><span class="badge">Versão <b id="version">—</b></span></div>
 
-<section class="section"><div class="grid2">
-<article class="card"><h2>Relógio</h2>
-  <div class="grid2"><div><small class="muted">Hora local</small><div class="clockbig" id="localClock">--:--:--</div></div><div><small class="muted">UTC</small><div class="clockbig" id="utcClock">--:--:--</div></div></div>
-  <div class="rows" style="margin-top:8px"><div class="row"><span>Fuso horário</span><b id="tzCurrent">—</b></div><div class="row"><span>Sincronizado NTP</span><b id="ntp">—</b></div></div>
-  <div class="actions" style="margin-top:10px"><button class="btn primary" id="autoClock">Detectar região e sincronizar</button></div>
-  <label style="margin-top:12px">Fuso horário manual<select id="timezoneSelect"><option value="">Carregando...</option></select></label>
-  <button class="btn" id="applyTimezone" style="margin-top:8px">Aplicar fuso manual</button>
-  <p id="timeResult" class="statusmsg"></p>
-</article>
-
-<article class="card"><h2>Operacional</h2><div class="big" id="opState">—</div>
+<section class="section"><article class="card"><h2>Operacional</h2><div class="big" id="opState">—</div>
   <p class="muted">Desligar o operacional para MMDVMHost e gateways, mas mantém painel, rede e acesso para manutenção.</p>
   <div class="actions"><button class="btn danger" id="opOff">Desligar operacional</button><button class="btn good" id="opOn">Ligar operacional</button></div>
   <p id="opResult" class="statusmsg"></p>
   <div class="rows" style="margin-top:12px"><div class="row"><span>CPU</span><b id="cpu">—</b></div><div class="row"><span>Temperatura</span><b id="temp">—</b></div><div class="row"><span>RAM</span><b id="ram">—</b></div></div>
-</article>
-</div></section>
+</article></section>
 
 <section class="section"><article class="card"><h2>Atualizações</h2>
   <div class="big" id="updateState">Verificando...</div>
@@ -42,22 +31,19 @@
 </article></section>
 
 <section class="section"><article class="card dangerzone"><h2>Energia</h2>
-  <p class="muted">Use os botões antes de cortar a alimentação. Reiniciar e desligar exigem confirmação.</p>
-  <div class="actions"><button class="btn" id="reboot">Reiniciar hotspot</button><button class="btn danger" id="poweroff">Desligar completamente</button></div>
+  <p class="muted">Reiniciar e desligar exigem confirmação. Aguarde o LED apagar antes de cortar a alimentação.</p>
+  <div class="notice warn" style="margin-bottom:12px"><b>Desligamento completo:</b> o botão abaixo encerra totalmente o hotspot (halt/poweroff). O aparelho fica desligado de verdade e só volta a ligar quando você religar a energia na mão — não há como ligar de novo pelo painel depois de desligado.</div>
+  <div class="actions"><button class="btn" id="reboot">Reiniciar hotspot</button><button class="btn danger" id="poweroff">Desligar completamente o hotspot</button></div>
   <p id="powerResult" class="statusmsg"></p>
 </article></section>
 </main></div>
 <script src="ui-common.js"></script><script>
-PNY.nav('system');PNY.initTheme();var info={},serverDelta=0,currentTZ='UTC';
-function clocks(){var d=new Date(Date.now()+serverDelta);try{PNY.q('localClock').textContent=new Intl.DateTimeFormat(PNY.locale(),{timeZone:currentTZ,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(d)}catch(e){PNY.q('localClock').textContent=d.toLocaleTimeString()}PNY.q('utcClock').textContent=d.toISOString().slice(11,19)}
-setInterval(clocks,1000);clocks();
+PNY.nav('system');PNY.initTheme();var info={};
 async function action(a,extra,timeout){return PNY.getj('/api/system',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({action:a},extra||{})),pnySilent:true},timeout||12000)}
 async function load(){
-  try{info=await PNY.getj('/api/system');currentTZ=info.timezone||'UTC';var now=Date.parse(info.utc||'');if(Number.isFinite(now))serverDelta=now-Date.now();
-    PNY.q('tzCurrent').textContent=currentTZ;PNY.q('ntp').textContent=info.ntp_synchronized?'Sim':'Aguardando';
+  try{info=await PNY.getj('/api/system');
     PNY.q('opState').textContent=info.operational?'Ligado':'Desligado';PNY.q('opState').className='big '+(info.operational?'green':'yellow');
     PNY.q('opOff').disabled=!info.operational;PNY.q('opOn').disabled=!!info.operational;
-    if(PNY.q('timezoneSelect')&&currentTZ)PNY.q('timezoneSelect').value=currentTZ;
   }catch(e){}
   try{var d=await PNY.getj('/api/dashboard'),t=d.telemetry||{},temp=Number(t.temperature);PNY.q('version').textContent=d.version||'—';
     PNY.q('cpu').textContent=t.cpu_percent==null?'—':t.cpu_percent+'%';PNY.q('temp').textContent=temp>=0?temp+' °C':'—';
@@ -65,14 +51,10 @@ async function load(){
   }catch(e){}
   PNY.sweepRealOnly(document);
 }
-async function loadTimezones(){try{var d=await PNY.getj('/api/system/timezones',null,8000),z=d.timezones||[],s=PNY.q('timezoneSelect');s.innerHTML=z.map(function(x){return '<option value="'+PNY.esc(x)+'">'+PNY.esc(x)+'</option>'}).join('');if(currentTZ)s.value=currentTZ}catch(e){PNY.q('timeResult').textContent='Não foi possível carregar os fusos horários.'}}
-PNY.q('autoClock').onclick=async function(){var zone='';try{zone=Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch(_){}if(!zone){PNY.q('timeResult').textContent='O navegador não informou um fuso IANA válido.';return}
-  var op=PNY.operation('Atualizando relógio','Ativando NTP e aplicando '+zone+'…');try{await action('auto-time',{timezone:zone},25000);op.done('Relógio sincronizado pela rede.');await load()}catch(e){op.error(e.message);PNY.q('timeResult').textContent=e.message}};
-PNY.q('applyTimezone').onclick=async function(){var z=PNY.q('timezoneSelect').value;if(!z)return;var op=PNY.operation('Aplicando fuso horário','Validando e aplicando '+z+'…');try{await action('timezone',{timezone:z},25000);op.done('Fuso confirmado pelo sistema.');await load()}catch(e){op.error(e.message);PNY.q('timeResult').textContent=e.message}};
 PNY.q('opOff').onclick=async function(){if(!confirm('Desligar MMDVMHost e gateways? O painel continuará acessível.'))return;var op=PNY.operation('Desligando operacional','Parando gateway e MMDVMHost com confirmação...');try{var r=await action('operational-off',null,30000);op.done(r.message||'Operacional desligado.');await load()}catch(e){op.error(e.message)}};
 PNY.q('opOn').onclick=async function(){var op=PNY.operation('Ligando operacional','Restaurando o último perfil salvo e confirmando serviços...');try{var r=await action('operational-on',null,75000);op.done(r.message||'Operacional ligado.');await load()}catch(e){op.error(e.message)}};
 PNY.q('reboot').onclick=async function(){if(!confirm('Reiniciar o hotspot agora?'))return;var op=PNY.operation('Reiniciando hotspot','O hotspot vai reiniciar. O painel ficará indisponível por alguns instantes.');try{await action('reboot',null,5000)}catch(e){}op.step('Reiniciando...')};
-PNY.q('poweroff').onclick=async function(){if(!confirm('Desligar completamente o hotspot? Depois será necessário religar a alimentação.'))return;var op=PNY.operation('Desligando','Encerrando com segurança. Aguarde apagar antes de cortar a energia.');try{await action('poweroff',null,5000)}catch(e){}op.step('Desligando com segurança...')};
+PNY.q('poweroff').onclick=async function(){if(!confirm('Desligar completamente o hotspot agora? O aparelho vai parar por completo e só liga de novo quando você religar a energia na mão — não dá para ligar pelo painel depois.'))return;var op=PNY.operation('Desligando completamente','Encerrando todos os serviços e desligando o aparelho. Aguarde o LED apagar antes de cortar a energia. Para ligar de novo, religue a alimentação na mão.');try{await action('poweroff',null,5000)}catch(e){}op.step('Desligando o hotspot por completo...')};
 async function update(){PNY.q('updateState').textContent='Verificando...';try{var d=await PNY.getj('/api/update'),rels=d.releases||[],latest=rels[0]||{},up=d.updater||{},staged=up.staged||null;window.pnyLatest=latest;window.pnyUp=up;
   PNY.q('updateState').textContent=d.available?'Atualização disponível':'Atualizado';PNY.q('updateState').className='big '+(d.available?'yellow':'green');
   PNY.q('updateText').textContent=d.available?('Instalada '+d.current+' · disponível '+d.latest+'. '+(latest.notes||'')):('Versão '+d.current+' sem atualização mais nova publicada.');
@@ -95,5 +77,5 @@ PNY.q('installUpdate').onclick=function(){var r=window.pnyLatest||{},up=window.p
   if(!(staged&&staged.verified&&staged.version===r.version)){var op=PNY.operation('Baixando '+r.version,'Download em segundo plano. Nada será instalado antes de 100% + SHA‑256 válido.');updateAction({action:'download',url:r.bundle_url,sha256:r.bundle_sha256,version:r.version},op,['downloaded']);return}
   if(!confirm('O download de '+r.version+' está completo e validado por SHA‑256. Mantenha alimentação estável durante a instalação. Prosseguir?'))return;
   var op2=PNY.operation('Instalando '+r.version,'Pacote local verificado. Criando ponto de retorno e aplicando componentes...');updateAction({action:'install-staged',sha256:r.bundle_sha256,version:r.version,keep_backup:PNY.q('keepBackup').checked},op2,['done'])};
-load();update();setInterval(function(){if(!document.hidden)load()},15000);loadTimezones();
+load();update();setInterval(function(){if(!document.hidden)load()},15000);
 </script></body></html>

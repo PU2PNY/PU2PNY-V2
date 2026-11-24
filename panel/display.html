@@ -41,7 +41,7 @@
   <p class="muted">A MMDVMHost continua dona da porta serial. O sistema impede dois renderizadores simultâneos e só confirma a tela física após retorno COMOK.</p>
 
   <label style="margin-top:12px">Tipo de tela</label>
-  <div class="segrow" id="screenType" role="group" aria-label="Tipo de tela"><button type="button" data-t="oled">OLED</button><button type="button" data-t="led">LED</button><button type="button" data-t="nextion">Nextion</button></div>
+  <div class="segrow" id="screenType" role="group" aria-label="Tipo de tela"><button type="button" data-t="oled" class="active">OLED</button><button type="button" data-t="led">LED</button><button type="button" data-t="nextion">Nextion</button></div>
 
   <div id="nextionBlock" class="hidden" style="margin-top:12px">
     <label><input id="enabled" type="checkbox" style="width:auto"> Usar Nextion pela MMDVM</label>
@@ -57,6 +57,7 @@
         <option value="nextion-70-800x480|800x480">Nextion 7,0" · 800×480</option>
       </select></div>
     </div>
+    <div class="formgrid" style="margin-top:8px"><div class="field"><label>Layout da tela (frente / verso)</label><select id="nextionFace"><option value="front">Frente</option><option value="back">Verso</option><option value="dual">Frente e verso</option></select></div></div>
     <div id="nativeWrap" class="hidden"><label>Layout compatível</label><select id="nativeLayout"><option value="0">ScreenLayout 0</option><option value="2">ON7LDS L2 · ScreenLayout 2</option><option value="3">ON7LDS L3 · ScreenLayout 3</option></select></div>
   </div>
 
@@ -81,6 +82,7 @@ function setFlow(s){document.querySelectorAll('#flow span').forEach(function(x){
 function pickDisplay(det){var rows=(det&&det.displays)||[];return rows.find(function(x){return x.detected===true})||rows[0]||{}}
 function syncType(){var t='';document.querySelectorAll('#screenType button').forEach(function(b){if(b.classList.contains('active'))t=b.dataset.t});PNY.q('nextionBlock').classList.toggle('hidden',t!=='nextion')}
 document.querySelectorAll('#screenType button').forEach(function(b){b.onclick=function(){document.querySelectorAll('#screenType button').forEach(function(x){x.classList.toggle('active',x===b)});syncType()}});
+syncType();
 PNY.q('rendererSelect').onchange=function(){PNY.q('nativeWrap').classList.toggle('hidden',PNY.q('rendererSelect').value!=='mmdvmhost-native')};
 document.querySelectorAll('#rotation button').forEach(function(b){b.onclick=function(){document.querySelectorAll('#rotation button').forEach(function(x){x.classList.toggle('active',x===b)});PNY.q('screen').style.transform='rotate('+b.dataset.r+'deg)'}});
 PNY.q('brightness').oninput=function(){PNY.q('brightnessValue').textContent=PNY.q('brightness').value+'%';PNY.q('screen').style.filter='brightness('+(0.4+Number(PNY.q('brightness').value)/100*0.6)+')'};
@@ -107,6 +109,7 @@ async function load(){
     PNY.q('screen').style.transform='rotate('+currentRotation()+'deg)';
     if(o.brightness!=null){PNY.q('brightness').value=o.brightness}PNY.q('brightnessValue').textContent=PNY.q('brightness').value+'%';
     if(o.mmdvm_info!=null)PNY.q('mmdvmInfo').checked=!!o.mmdvm_info;
+    if(o.nextion_face)PNY.q('nextionFace').value=o.nextion_face;
     PNY.q('raw').textContent=JSON.stringify({display_runtime:dr,detection:detection,override:o,hardware_display:h.display||{}},null,2);
     PNY.sweepRealOnly(document);
   }catch(e){PNY.q('raw').textContent=e.message}
@@ -115,8 +118,8 @@ PNY.q('apply').onclick=async function(){
   var m=(PNY.q('modelSelect').value||'auto|').split('|');
   var payload={enabled:currentType()==='nextion'?PNY.q('enabled').checked:false,renderer:PNY.q('rendererSelect').value,layout:PNY.q('nativeLayout').value,
     model_profile:m[0],resolution:m[1]||'',
-    /* v2 additions — screen type, rotation, brightness and MMDVM-on-all-screens */
-    screen_type:currentType(),rotation:currentRotation(),brightness:Number(PNY.q('brightness').value),mmdvm_info:PNY.q('mmdvmInfo').checked};
+    /* v2 additions — screen type, Nextion front/back layout, rotation, brightness, MMDVM-on-all-screens */
+    screen_type:currentType(),nextion_face:PNY.q('nextionFace').value,rotation:currentRotation(),brightness:Number(PNY.q('brightness').value),mmdvm_info:PNY.q('mmdvmInfo').checked};
   var op=PNY.operation('Aplicando Display','Enviando a configuração e aguardando a confirmação física da tela...');
   try{await PNY.getj('/api/display/override',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),pnySilent:true},20000);
     op.done('Display atualizado e confirmado.');PNY.q('result').textContent='Display atualizado.';setTimeout(load,700);

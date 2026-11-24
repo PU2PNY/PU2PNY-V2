@@ -4,7 +4,12 @@
 <link rel="icon" type="image/png" href="favicon.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script>(function(){document.documentElement.setAttribute('data-theme',localStorage.getItem('pu2pny-theme')||'dark')})();</script>
 <link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="pny-v2.css">
-<style>.passrow{display:flex;gap:8px}.passrow input{flex:1}.signalbars{display:inline-flex;align-items:flex-end;gap:2px;height:16px;vertical-align:middle;margin-right:7px}.signalbars i{width:4px;background:var(--line);border-radius:1px}.signalbars i.on{background:var(--green)}</style>
+<style>.passrow{display:flex;gap:8px}.passrow input{flex:1}.signalbars{display:inline-flex;align-items:flex-end;gap:2px;height:16px;vertical-align:middle;margin-right:7px}.signalbars i{width:4px;background:var(--line);border-radius:1px}.signalbars i.on{background:var(--green)}
+.savednet{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card2);margin-bottom:8px}
+.savednet .info{min-width:0}.savednet .ssid{font-weight:900;font-size:15px;overflow:hidden;text-overflow:ellipsis}.savednet .tags{margin-top:3px;display:flex;gap:6px;flex-wrap:wrap}
+.savednet .tag{font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.savednet .tag.conn{color:var(--green);border-color:color-mix(in srgb,var(--green) 55%,var(--line))}.savednet .tag.saved{color:var(--blue);border-color:color-mix(in srgb,var(--blue) 55%,var(--line))}
+.savednet .acts{display:flex;gap:6px;flex-wrap:wrap}.savednet .acts .btn{padding:6px 10px;font-size:12px}</style>
 </head><body><div class="shell">
 <header class="topnav">
   <div class="brand"><img class="brandmark" src="favicon.png" alt="PU2PNY"><span class="brandtext"><b style="font-size:19px">PU2PNY-OS</b><small>Internet e rede</small></span></div>
@@ -34,25 +39,29 @@
 </div></section>
 
 <section class="section"><div class="grid2">
-<article class="card"><h3>Rede principal e rede de backup</h3>
-  <div class="rows"><div class="row"><span>Rede Wi‑Fi 1</span><b id="wifiPrimary">—</b></div><div class="row"><span>Rede Wi‑Fi 2</span><b id="wifiSecondary">—</b></div></div>
-  <div class="actions" style="margin:10px 0"><button class="btn" id="scan">↻ Buscar redes</button></div>
+<article class="card"><h3>Redes Wi‑Fi salvas</h3>
+  <div id="savedNets"><div class="muted">Carregando...</div></div>
+  <div class="actions" style="margin:12px 0"><button class="btn" id="scan">↻ Buscar redes</button><button class="btn" id="addBackup">Adicionar rede de backup</button></div>
 
-  <h4 style="margin:12px 0 6px">Trocar rede atual</h4>
-  <div class="formgrid">
-    <div class="field"><label>Rede encontrada</label><select id="primarySelect"><option value="">Buscar redes primeiro</option></select></div>
-    <div class="field"><label>Ou adicionar manualmente</label><input id="primaryManual" placeholder="Nome da rede (SSID)" maxlength="64"></div>
+  <div id="primaryForm" class="hidden" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
+    <h4 style="margin:0 0 8px">Substituir rede principal</h4>
+    <div class="formgrid">
+      <div class="field"><label>Rede encontrada</label><select id="primarySelect"><option value="">Buscar redes primeiro</option></select></div>
+      <div class="field"><label>Ou adicionar manualmente</label><input id="primaryManual" placeholder="Nome da rede (SSID)" maxlength="64"></div>
+    </div>
+    <label>Senha</label><div class="passrow"><input id="primaryPass" type="password" placeholder="Senha"><button class="btn" type="button" data-showpass="primaryPass">Mostrar</button></div>
+    <div class="actions" style="margin-top:10px"><button class="btn primary" id="savePrimary">Aplicar rede principal</button><button class="btn" type="button" data-cancel="primaryForm">Cancelar</button></div>
   </div>
-  <label>Senha</label><div class="passrow"><input id="primaryPass" type="password" placeholder="Senha"><button class="btn" type="button" data-showpass="primaryPass">Mostrar</button></div>
-  <button class="btn primary" id="savePrimary" style="margin-top:10px">Aplicar rede principal</button>
 
-  <h4 style="margin:16px 0 6px">Adicionar rede de backup</h4>
-  <div class="formgrid">
-    <div class="field"><label>Rede encontrada</label><select id="secondSelect"><option value="">Buscar redes primeiro</option></select></div>
-    <div class="field"><label>Ou adicionar manualmente</label><input id="secondManual" placeholder="Nome da rede (SSID)" maxlength="64"></div>
+  <div id="secondForm" class="hidden" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
+    <h4 style="margin:0 0 8px" id="secondFormTitle">Adicionar rede de backup</h4>
+    <div class="formgrid">
+      <div class="field"><label>Rede encontrada</label><select id="secondSelect"><option value="">Buscar redes primeiro</option></select></div>
+      <div class="field"><label>Ou adicionar manualmente</label><input id="secondManual" placeholder="Nome da rede (SSID)" maxlength="64"></div>
+    </div>
+    <label>Senha</label><div class="passrow"><input id="secondPass" type="password" placeholder="Senha"><button class="btn" type="button" data-showpass="secondPass">Mostrar</button></div>
+    <div class="actions" style="margin-top:10px"><button class="btn primary" id="saveSecond">Salvar rede de backup</button><button class="btn" type="button" data-cancel="secondForm">Cancelar</button></div>
   </div>
-  <label>Senha</label><div class="passrow"><input id="secondPass" type="password" placeholder="Senha"><button class="btn" type="button" data-showpass="secondPass">Mostrar</button></div>
-  <button class="btn" id="saveSecond" style="margin-top:10px">Salvar rede de backup</button>
   <p id="wifiResult" class="statusmsg"></p>
   <p class="muted">A segunda rede funciona como backup. Se a atual cair, o PU2PNY tenta a outra; a escolha automática considera o sinal sem trocar por diferenças pequenas. Ethernet tem prioridade quando disponível.</p>
 </article>
@@ -90,8 +99,25 @@ async function load(){
   }catch(e){}
   loadProfiles();PNY.sweepRealOnly(document);
 }
+function reveal(id){['primaryForm','secondForm'].forEach(function(f){PNY.q(f).classList.toggle('hidden',f!==id)});if(id)PNY.q(id).scrollIntoView({behavior:'smooth',block:'nearest'})}
+function savedRow(role,ssid,connected,saved){
+  var tags='';if(connected)tags+='<span class="tag conn">Conectada</span>';if(role==='primary')tags+='<span class="tag saved">Principal</span>';else tags+='<span class="tag saved">'+(saved?'Backup salvo':'Não configurada')+'</span>';
+  var acts='';
+  if(role==='primary'){acts='<button class="btn" data-edit="primaryForm">Substituir</button>';}
+  else{acts='<button class="btn" data-edit="secondForm">'+(saved?'Substituir':'Adicionar')+'</button>';if(saved){acts+='<button class="btn" data-switch="1">Tornar principal</button><button class="btn danger" data-remove="1">Remover</button>';}}
+  return '<div class="savednet"><div class="info"><div class="ssid">'+PNY.esc(ssid||'—')+'</div><div class="tags">'+tags+'</div></div><div class="acts">'+acts+'</div></div>';
+}
 async function loadProfiles(){try{var p=await PNY.getj('/api/network/wifi/profiles');wifiProfiles=p;var active=p.active_ssid||'',p1=(p.primary&&p.primary.ssid)||'',p2=(p.secondary&&p.secondary.ssid)||'';
-  PNY.q('wifiPrimary').textContent=(p1||'—')+(active===p1?' · conectada':'');PNY.q('wifiSecondary').textContent=(p2||'Não configurada')+(active===p2?' · conectada':'')}catch(e){}}
+  var host=PNY.q('savedNets');
+  host.innerHTML=savedRow('primary',p1||'Rede principal não identificada',active&&active===p1,!!p1)+savedRow('secondary',p2||'',active&&active===p2,!!p2);
+  host.querySelectorAll('[data-edit]').forEach(function(b){b.onclick=function(){if(b.dataset.edit==='secondForm')PNY.q('secondFormTitle').textContent=p2?'Substituir rede de backup':'Adicionar rede de backup';reveal(b.dataset.edit)}});
+  var sw=host.querySelector('[data-switch]');if(sw)sw.onclick=switchNetworks;
+  var rm=host.querySelector('[data-remove]');if(rm)rm.onclick=removeBackup;
+}catch(e){}}
+async function switchNetworks(){if(!confirm('Tornar a rede de backup a rede principal? A conexão pode cair por alguns segundos.'))return;var op=PNY.operation('Trocando redes','Promovendo a rede de backup a principal...');try{await PNY.getj('/api/network/wifi/profiles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'switch'}),pnySilent:true},20000);op.done('Redes trocadas.');setTimeout(load,1200)}catch(e){op.error(e.message);PNY.q('wifiResult').textContent=e.message}}
+async function removeBackup(){if(!confirm('Remover a rede de backup salva?'))return;var op=PNY.operation('Removendo rede de backup','Apagando o perfil de backup sem alterar a rede principal...');try{await PNY.getj('/api/network/wifi/profiles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'remove-secondary'}),pnySilent:true},12000);op.done('Rede de backup removida.');setTimeout(load,800)}catch(e){op.error(e.message);PNY.q('wifiResult').textContent=e.message}}
+PNY.q('addBackup').onclick=function(){PNY.q('secondFormTitle').textContent=(wifiProfiles.secondary&&wifiProfiles.secondary.ssid)?'Substituir rede de backup':'Adicionar rede de backup';reveal('secondForm')};
+document.querySelectorAll('[data-cancel]').forEach(function(b){b.onclick=function(){PNY.q(b.dataset.cancel).classList.add('hidden')}});
 function fillOptions(rows){rows=rows||[];var cur=wifiProfiles.active_ssid||(wifiProfiles.primary&&wifiProfiles.primary.ssid)||'';
   var primary=cur?'<option value="'+PNY.esc(cur)+'">'+PNY.esc(cur)+' · conectada</option>':'<option value="">Rede conectada não identificada</option>';
   var others=rows.filter(function(x){return x.ssid&&x.ssid!==cur}).map(function(x){return '<option value="'+PNY.esc(x.ssid)+'" data-bssid="'+PNY.esc(x.bssid||'')+'">'+PNY.esc(x.ssid)+' · '+(x.signal||'—')+'%'+(x.channel?' · canal '+x.channel:'')+'</option>'}).join('');
@@ -112,7 +138,7 @@ PNY.q('savePrimary').onclick=async function(){var sel=PNY.q('primarySelect'),o=s
   var op=PNY.operation('Aplicando rede principal','Validando senha, associação e endereço IP. A rede anterior fica como recuperação...');
   try{await PNY.getj('/api/network/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ssid:ssid,password:PNY.q('primaryPass').value,bssid:bssid,keep_ap:false}),pnySilent:true},12000).catch(function(){return {}});
     for(var i=0;i<75;i++){await new Promise(function(r){setTimeout(r,400)});try{var st=await PNY.getj('/api/network/connect/status',null,3500);
-      if(st.state==='connected'){op.done(st.message||'Rede principal conectada.');PNY.q('primaryPass').value='';PNY.q('primaryManual').value='';load();return}
+      if(st.state==='connected'){op.done(st.message||'Rede principal conectada.');PNY.q('primaryPass').value='';PNY.q('primaryManual').value='';reveal(null);load();return}
       if(st.state==='error'||st.state==='recovery_ap')throw new Error(st.message||'A rede não foi aplicada; a anterior foi preservada.')}catch(e){if(i>45&&e.message)throw e}}
     throw new Error('A nova rede não confirmou conexão dentro do limite; tente novamente.');
   }catch(e){op.error(e.message);PNY.q('wifiResult').textContent=e.message}
@@ -123,7 +149,7 @@ PNY.q('saveSecond').onclick=async function(){var sel=PNY.q('secondSelect'),o=sel
   try{await PNY.getj('/api/network/wifi/profiles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save-secondary',ssid:ssid,password:PNY.q('secondPass').value,bssid:bssid}),pnySilent:true},15000);
     op.step('Rede de backup salva. Comparando sinais...');
     await PNY.getj('/api/network/wifi/profiles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'auto-select'}),pnySilent:true},8000);
-    op.done('Rede de backup salva; seleção automática ativada.');PNY.q('secondPass').value='';PNY.q('secondManual').value='';setTimeout(load,900);
+    op.done('Rede de backup salva; seleção automática ativada.');PNY.q('secondPass').value='';PNY.q('secondManual').value='';reveal(null);setTimeout(load,900);
   }catch(e){op.error(e.message);PNY.q('wifiResult').textContent=e.message}
 };
 PNY.q('refresh').onclick=load;load();setInterval(function(){if(!document.hidden)load()},15000);

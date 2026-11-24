@@ -29,6 +29,17 @@
   <p id="protoResult" class="statusmsg"></p>
 </article></section>
 
+<section class="section"><article class="card">
+  <h2>Identidade do hotspot</h2>
+  <p class="muted">Indicativo e DMR ID usados pelo rádio, gateways e diretórios. Alterar reaplica o registro nos gateways.</p>
+  <div class="formgrid" style="margin-top:12px">
+    <div class="field"><label for="callsign">Indicativo</label><input id="callsign" autocapitalize="characters" autocomplete="off" placeholder="Ex.: PU2ABC" maxlength="16"></div>
+    <div class="field"><label for="dmrid">DMR ID</label><input id="dmrid" inputmode="numeric" autocomplete="off" placeholder="Ex.: 7240000" maxlength="9"></div>
+  </div>
+  <button class="btn primary" id="saveIdentity" style="margin-top:10px">Salvar identidade</button>
+  <p id="identityResult" class="statusmsg"></p>
+</article></section>
+
 <section class="section"><div class="grid2">
 <article class="card">
   <h2>Perfil do protocolo</h2>
@@ -92,10 +103,20 @@ PNY.q('visibility').querySelectorAll('button').forEach(function(b){b.onclick=asy
     op.done('Modo '+(pub?'público':'privado')+' aplicado.');cfg.public=pub;renderVisibility()}
   catch(e){op.error(e.message);PNY.q('visResult').textContent=e.message}
 }});
+function renderIdentity(){if(document.activeElement!==PNY.q('callsign'))PNY.q('callsign').value=cfg.callsign||'';if(document.activeElement!==PNY.q('dmrid'))PNY.q('dmrid').value=cfg.dmr_id||''}
+PNY.q('saveIdentity').onclick=async function(){
+  var call=PNY.q('callsign').value.trim().toUpperCase(),id=PNY.q('dmrid').value.trim();
+  if(!/^[A-Z0-9/-]{3,16}$/.test(call)){PNY.q('identityResult').textContent='Informe um indicativo válido.';return}
+  if(!/^\d{4,9}$/.test(id)){PNY.q('identityResult').textContent='Informe um DMR ID válido (apenas números).';return}
+  var op=PNY.operation('Salvando identidade','Gravando indicativo e DMR ID e reaplicando o registro nos gateways...');
+  try{await PNY.getj('/api/station/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'identity',callsign:call,dmr_id:id}),pnySilent:true},30000);
+    op.done('Identidade salva.');PNY.q('identityResult').textContent='Identidade salva.';setTimeout(load,900);
+  }catch(e){op.error(e.message);PNY.q('identityResult').textContent=e.message}
+};
 async function load(){
   try{cfg=await PNY.getj('/api/config')}catch(e){cfg={}}
   try{var d=await PNY.getj('/api/protocol/profiles');profiles=d.profiles||{}}catch(e){profiles={}}
-  renderGrid();renderProfile();renderVisibility();
+  renderGrid();renderProfile();renderVisibility();renderIdentity();
 }
 PNY.q('refresh').onclick=load;load();setInterval(function(){if(!document.hidden)load()},20000);
 </script></body></html>
