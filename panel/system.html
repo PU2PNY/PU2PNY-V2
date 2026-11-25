@@ -1,13 +1,13 @@
 <!doctype html><html lang="pt-BR" data-theme="dark" class="pny-i18n-pending"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="color-scheme" content="dark light"><title>PU2PNY-OS</title>
+<meta name="color-scheme" content="dark light"><title>PU2PNY-V2</title>
 <link rel="icon" type="image/png" href="favicon.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script>(function(){document.documentElement.setAttribute('data-theme',localStorage.getItem('pu2pny-theme')||'dark')})();</script>
 <link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="pny-v2.css">
 <style>.clockbig{font-size:32px;font-weight:1000;letter-spacing:1px;font-variant-numeric:tabular-nums}.dangerzone{border-color:color-mix(in srgb,var(--red) 45%,var(--line))}</style>
 </head><body><div class="shell">
 <header class="topnav">
-  <div class="brand"><img class="brandmark" src="favicon.png" alt="PU2PNY"><span class="brandtext"><b style="font-size:19px">PU2PNY-OS</b><small>Sistema</small></span></div>
+  <div class="brand"><img class="brandmark" src="favicon.png" alt="PU2PNY"><span class="brandtext"><b style="font-size:19px">PU2PNY-V2</b><small>Sistema</small></span></div>
   <nav class="nav" id="mainNav"></nav>
   <div class="navtools"><span class="pill"><span id="clockLocal">--:--:--</span></span><button class="btn" id="themeToggle">☀ Claro</button></div>
 </header>
@@ -72,7 +72,7 @@ async function updateAction(body,op,doneStates){doneStates=doneStates||['done'];
     if(st==='rolled_back'){op.error(msg||'A instalação falhou e o estado anterior foi restaurado automaticamente.');update();return}
     if(st==='error')throw new Error(msg||'Falha na atualização')}
   throw new Error('A operação ultrapassou o limite seguro; confira o estado antes de tentar novamente.')}catch(e){op.error(e.message)}}
-PNY.q('checkUpdate').onclick=async function(){var op=PNY.operation('Verificando atualizações','Consultando releases oficiais do PU2PNY-OS...');await update();op.done('Verificação concluída.')};
+PNY.q('checkUpdate').onclick=async function(){var op=PNY.operation('Verificando atualizações','Consultando releases oficiais do PU2PNY-V2...');await update();op.done('Verificação concluída.')};
 PNY.q('installUpdate').onclick=function(){var r=window.pnyLatest||{},up=window.pnyUp||{},staged=up.staged||null;if(!r.installable)return;
   if(!(staged&&staged.verified&&staged.version===r.version)){var op=PNY.operation('Baixando '+r.version,'Download em segundo plano. Nada será instalado antes de 100% + SHA‑256 válido.');updateAction({action:'download',url:r.bundle_url,sha256:r.bundle_sha256,version:r.version},op,['downloaded']);return}
   if(!confirm('O download de '+r.version+' está completo e validado por SHA‑256. Mantenha alimentação estável durante a instalação. Prosseguir?'))return;

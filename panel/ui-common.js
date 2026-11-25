@@ -57,8 +57,8 @@
     if(q('pnyFooter'))return;
     var f=document.createElement('footer');f.id='pnyFooter';
     f.style.cssText='margin:28px auto 14px;max-width:1460px;padding:14px 22px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;text-align:center';
-    f.textContent='PU2PNY-OS · versão…';document.body.appendChild(f);
-    getj('/api/status').then(function(s){f.textContent='PU2PNY-OS · '+(s.version||'versão indisponível')}).catch(function(){f.textContent='PU2PNY-OS'});
+    f.textContent='PU2PNY-V2 · versão…';document.body.appendChild(f);
+    getj('/api/status').then(function(s){f.textContent='PU2PNY-V2 · '+(s.version||'versão indisponível')}).catch(function(){f.textContent='PU2PNY-V2'});
   }
   function tools(active){
     var tools=document.querySelector('.navtools');if(!tools)return;
