@@ -41,7 +41,7 @@
 
 ## Integração nesta branch
 
-- `ci/stage-v2-arm32.sh` prepara um overlay com as 15 páginas e arquivos estáticos do painel, o binário ARMv6 de 2pnyd e a unidade systemd. A unidade não é ativada no boot até a integração de suas dependências. O build Buildroot com `--panel-backend` compara os arquivos empacotados aos do overlay e mede o conjunto, sem publicar imagem.
+- `ci/stage-v2-arm32.sh` prepara um overlay com as 15 páginas e arquivos estáticos do painel, o binário ARMv6 de 2pnyd e a unidade systemd. A unidade não é ativada no boot até a integração de suas dependências. O build Buildroot com `--integration` compara os arquivos empacotados aos do overlay, verifica os binários MMDVM/Nextion e mede o conjunto com as dependências de rede, sem publicar imagem.
 - Validado localmente com Go 1.24.9: `go test`, executável estático ELF ARM32, `GOARM=6`, teste do overlay e rejeição de imagem incompleta. Daemon novo: **7.012.536 bytes**, **2.079.236 bytes** com XZ. O total da imagem continua sem comprovação.
 - O próximo ponto de integração é migrar o primeiro acesso e rede para a base Buildroot. Portar o gerenciador de Wi-Fi e as dependências de AP/STA e DHCP, integrar o assistente e validar duas redes com rollback antes de ativar o serviço do painel no boot. Em seguida, integrar RF e os gateways sem alterar o comportamento aprovado, displays e serviços restantes conforme a matriz.
 - A última TEST-2 foi baixada e conferida: XZ íntegro, 729.802.744 bytes, SHA-256 `966d9d502508d4254712b89cdc57e30e5c48d57b544134667827e2af5c166261`.
@@ -52,3 +52,5 @@
 - `buildroot/` fornece pacotes para recompilar os três binários na base leve. A toolchain Bootlin do Pi Zero W produziu localmente ELF ARM32/v6KZ para os três. O teste local de link de MMDVM-Host/Display usou a biblioteca MQTT da TEST-2 e os headers do Buildroot. O CI dos pacotes verifica o link com a própria biblioteca do Buildroot.
 - O NextionDriver compilado preserva a porta virtual exclusiva em `/run/2pny-nextiondriver/ttyNextionDriver`. Os pacotes não ativam serviços, não alteram a configuração de RF e não gravam HMI/TFT.
 - Na imagem TEST-2, `2pny-network-core.service` e `2pny-network-manager.service` dependem de NetworkManager. A base mínima ainda não inclui NetworkManager e o serviço gerenciador também requer `2pny-eventd`. A migração precisa portar esses componentes com seus estados e testar o comportamento de Wi-Fi/AP, em particular `nmcli`, `flock`, `rfkill`, regras de encaminhamento e os caminhos de firmware. O CI de software não valida RF, UART, rede sem fio física ou a tela.
+
+- `ci/v2-arm32-integration.fragment` seleciona NetworkManager/nmcli, D-Bus do wpa_supplicant, Avahi, DHCP do dnsmasq, rfkill, flock e iptables junto aos três pacotes MMDVM/Nextion. Esses pacotes são dependências da migração; os scripts, configurações e serviços PU2PNY de rede e rádio ainda precisam ser integrados e validados.

@@ -1,4 +1,4 @@
-name: V2 Buildroot panel and backend measurement
+name: V2 Buildroot partial hotspot integration measurement
 on:
   push:
     branches: [build/v2-full-80mb-integration]
@@ -8,6 +8,9 @@ on:
       - 'ci/stage-v2-arm32.sh'
       - 'ci/build-v2-minimal-arm32.sh'
       - 'ci/minimal-arm32.fragment'
+      - 'ci/v2-arm32-integration.fragment'
+      - 'buildroot/**'
+      - 'ci/harden-nextiondriver-0.3.31.11[78].py'
       - 'ci/v2-panel-overlay.py'
       - 'ci/prepare-*-backend.py'
       - 'ci/test-v2-full-report.go'
@@ -32,11 +35,11 @@ jobs:
           git clone --depth 1 --branch 2026.08.2 https://github.com/buildroot/buildroot.git "$RUNNER_TEMP/buildroot"
           test "$(git -C "$RUNNER_TEMP/buildroot" rev-parse HEAD)" = cd8011d7c9965e1bcfc9c18d4272943f9c333b68
       - name: Build and measure partial ARMv6 integration
-        run: bash ci/build-v2-minimal-arm32.sh "$RUNNER_TEMP/buildroot" "$RUNNER_TEMP/br-out" --panel-backend
+        run: bash ci/build-v2-minimal-arm32.sh "$RUNNER_TEMP/buildroot" "$RUNNER_TEMP/br-out" --integration
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: arm32-panel-backend-measurement
+          name: arm32-integration-measurement
           path: |
             ${{ runner.temp }}/br-out/measurement/status.txt
             ${{ runner.temp }}/br-out/measurement/size-breakdown.txt

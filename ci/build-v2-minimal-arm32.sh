@@ -6,24 +6,29 @@ br="$(realpath "$1")"
 out="$(realpath -m "$2")"
 status="BASE_ONLY_NOT_HOTSPOT"
 overlay=""
-if [[ ${3:-} == --panel-backend ]]; then
+fragments=("$repo/ci/minimal-arm32.fragment")
+external=()
+if [[ ${3:-} == --integration ]]; then
     overlay="$(mktemp -d)"
     trap 'rm -rf -- "$overlay"' EXIT
     bash "$repo/ci/stage-v2-arm32.sh" "$overlay"
-    status="PANEL_BACKEND_ONLY_NOT_HOTSPOT"
+    status="PARTIAL_INTEGRATION_NOT_HOTSPOT"
+    fragments+=("$repo/ci/v2-arm32-integration.fragment")
+    external=(BR2_EXTERNAL="$repo/buildroot")
 elif (( $# != 2 )); then
-    echo "Usage: $0 BUILDROOT OUT [--panel-backend]" >&2
+    echo "Usage: $0 BUILDROOT OUT [--integration]" >&2
     exit 2
 fi
 mkdir -p "$out"
-make -C "$br" O="$out" raspberrypi0w_defconfig
+make -C "$br" O="$out" "${external[@]}" raspberrypi0w_defconfig
 # Keep native systemd semantics for the existing managers; avoid fake shims.
-python3 - "$out/.config" "$repo/ci/minimal-arm32.fragment" "$overlay" <<'PY'
+python3 - "$out/.config" "$overlay" "${fragments[@]}" <<'PY'
 import pathlib,re,sys
-p,fragment=map(pathlib.Path,sys.argv[1:3])
-overlay = sys.argv[3]
+p = pathlib.Path(sys.argv[1])
+overlay = sys.argv[2]
+fragments = map(pathlib.Path, sys.argv[3:])
 lines=p.read_text().splitlines()
-for line in fragment.read_text().splitlines():
+for line in (line for fragment in fragments for line in fragment.read_text().splitlines()):
     if not line or line.startswith('#'): continue
     key=line.split('=',1)[0]
     assert re.fullmatch(r'BR2_[A-Z0-9_]+',key),key
@@ -38,16 +43,22 @@ if overlay:
 p.write_text('\n'.join(lines)+'\n')
 PY
 make -C "$br" O="$out" olddefconfig
-while IFS= read -r line; do
-    [[ -z "$line" || "$line" == \#* ]] && continue
-    grep -Fxq "$line" "$out/.config" || { echo "Unresolved Buildroot option: $line" >&2; exit 1; }
-done < "$repo/ci/minimal-arm32.fragment"
+for fragment in "${fragments[@]}"; do
+    while IFS= read -r line; do
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        grep -Fxq "$line" "$out/.config" || { echo "Unresolved Buildroot option: $line" >&2; exit 1; }
+    done < "$fragment"
+done
 make -C "$br" O="$out" -j "$(nproc)"
 test -s "$out/images/sdcard.img"
 if [[ -n "$overlay" ]]; then
     cmp "$overlay/usr/local/bin/2pnyd" "$out/target/usr/local/bin/2pnyd"
     cmp "$overlay/etc/systemd/system/2pnyd.service" "$out/target/etc/systemd/system/2pnyd.service"
     diff -r "$overlay/usr/share/2pny" "$out/target/usr/share/2pny"
+    for binary in MMDVM-Host MMDVM-Display NextionDriver-pu2pny; do
+        file "$out/target/usr/local/bin/$binary" | grep -E 'ELF 32-bit.*ARM'
+    done
+    test -x "$out/target/usr/bin/nmcli"
 fi
 mkdir -p "$out/measurement"
 xz -T2 -9 -c "$out/images/sdcard.img" > "$out/measurement/base-arm32.img.xz"
