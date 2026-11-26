@@ -30,6 +30,17 @@ GATEWAYS = (
     "DAPNETGateway", "P25Gateway", "NXDNGateway", "dgwvoicetransmit",
     "DMR2NXDN", "DMR2YSF", "YSF2DMR", "YSF2NXDN", "YSF2P25",
 )
+FIRST_ACCESS_UNITS = (
+    "2pny-eventd.service", "2pny-network-manager.service",
+    "2pny-network-core.service", "2pny-network-online.service",
+    "2pny-mdns-alias.service", "2pny-mdns-guard.service",
+    "2pny-wifi-retry-reconcile.service", "2pnyd.service",
+)
+# TEST-2 delegates AP/DHCP to its network core, not the default daemons.
+MASKED_UNITS = (
+    "hostapd.service", "dnsmasq.service", "NetworkManager-wait-online.service",
+    "2pny-firstboot.service", "2pny-setup-watch.service",
+)
 REQUIRED = (
     "usr/share/2pny/wizard.html", "usr/share/2pny/protocols.html",
     "usr/share/2pny/radioid.html", "usr/share/2pny/rf-access.html",
@@ -81,6 +92,19 @@ def copy_runtime(baseline, target):
         dest = target / "usr/local/bin" / name
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, dest)
+
+
+    unit_root = target / "etc/systemd/system"
+    wants = unit_root / "multi-user.target.wants"
+    wants.mkdir(exist_ok=True)
+    for name in FIRST_ACCESS_UNITS:
+        if not (unit_root / name).is_file():
+            raise ValueError(f"Missing first-access unit: {name}")
+        (wants / name).symlink_to(Path("..") / name)
+    for name in MASKED_UNITS:
+        if not (baseline / "etc/systemd/system" / name).is_symlink():
+            raise ValueError(f"Expected a masked TEST-2 unit: {name}")
+        (unit_root / name).symlink_to("/dev/null")
 
 
 if __name__ == "__main__":

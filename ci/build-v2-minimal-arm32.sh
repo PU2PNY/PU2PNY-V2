@@ -15,7 +15,7 @@ if [[ ${3:-} == --integration && $# == 4 ]]; then
     staged="$(mktemp -d)"
     trap 'rm -rf -- "$overlay" "$staged"' EXIT
     python3 "$repo/ci/stage-v2-test2-runtime.py" "$4" "$staged"
-    rm -f "$staged/etc/systemd/system/2pnyd.service"
+    rm -f "$overlay/etc/systemd/system/2pnyd.service"
     cp -an "$staged/." "$overlay/"
     status="TEST2_RUNTIME_INTEGRATION_NOT_RELEASED"
     fragments+=("$repo/ci/v2-arm32-integration.fragment")
@@ -71,6 +71,8 @@ if [[ -n "$overlay" ]]; then
     test -x "$out/target/usr/local/sbin/2pny-network-core"
     test -x "$out/target/usr/local/bin/DMRGateway"
     test -s "$out/target/usr/share/2pny/wizard.html"
+    test -L "$out/target/etc/systemd/system/multi-user.target.wants/2pnyd.service"
+    test -L "$out/target/etc/systemd/system/multi-user.target.wants/2pny-network-core.service"
 fi
 mkdir -p "$out/measurement"
 xz -T2 -9 -c "$out/images/sdcard.img" > "$out/measurement/base-arm32.img.xz"

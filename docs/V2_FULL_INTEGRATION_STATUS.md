@@ -41,7 +41,7 @@
 
 ## Integração nesta branch
 
-- `ci/stage-v2-arm32.sh` prepara um overlay com as 15 páginas e arquivos estáticos do painel, o binário ARMv6 de 2pnyd e a unidade systemd. A unidade não é ativada no boot até a integração de suas dependências. O build Buildroot com `--integration` compara os arquivos empacotados aos do overlay, verifica os binários MMDVM/Nextion e mede o conjunto com as dependências de rede, sem publicar imagem.
+- `ci/stage-v2-arm32.sh` prepara um overlay com as 15 páginas e arquivos estáticos do painel, o binário ARMv6 de 2pnyd e a unidade systemd. No build de integração, a unidade do painel é substituída pela original do TEST-2, com as restrições systemd preservadas. O build Buildroot com `--integration` compara os arquivos empacotados aos do overlay, verifica os binários MMDVM/Nextion e mede o conjunto com as dependências de rede, sem publicar imagem.
 - Validado localmente com Go 1.24.9: `go test`, executável estático ELF ARM32, `GOARM=6`, teste do overlay e rejeição de imagem incompleta. Daemon novo: **7.012.536 bytes**, **2.079.236 bytes** com XZ. O total da imagem continua sem comprovação.
 - O próximo ponto de integração é migrar o primeiro acesso e rede para a base Buildroot. Portar o gerenciador de Wi-Fi e as dependências de AP/STA e DHCP, integrar o assistente e validar duas redes com rollback antes de ativar o serviço do painel no boot. Em seguida, integrar RF e os gateways sem alterar o comportamento aprovado, displays e serviços restantes conforme a matriz.
 - A última TEST-2 foi baixada e conferida: XZ íntegro, 729.802.744 bytes, SHA-256 `966d9d502508d4254712b89cdc57e30e5c48d57b544134667827e2af5c166261`.
@@ -62,3 +62,6 @@
 - No TEST-2, o Helix usava ARMv7. O mesmo código de referência `b71a5fccd6371a88284866510000302f0126d565` agora é compilado para ARMv6. Passaram 47 testes de software e o autoteste do executável no QEMU com CPU ARM1176. Os modos permanecem desativados por padrão. A integração com hardware e com o rádio segue pendente.
 
 - Na medição local do TEST-2, a cópia dos blocos alocados por `e2image -ra`, preservando MBR e partição de boot, gerou XZ íntegro de **584.222.128 bytes**. A limpeza de blocos livres, sem mexer nos arquivos, não atinge 80 MB. O overlay aprovado armazenou **642 arquivos**, cerca de **30 MiB** antes da compactação.
+
+- A imagem de integração ativa as unidades originais de primeiro acesso, Wi-Fi e painel. Hostapd e dnsmasq continuam sob o gerenciador PU2PNY, com as unidades independentes bloqueadas. MMDVM e gateways não entram na lista de boot de integração até que a inicialização e seus requisitos de hardware sejam verificados.
+- Em teste local ARM1176, o carregador iniciou a resolução de dependências dos seis gateways com a glibc Bootlin e as bibliotecas MQTT/TLS da referência. A verificação usa somente o carregador ELF e não inicia transmissão ou conexão de rádio. O CI repete a verificação com as bibliotecas da imagem Buildroot.
