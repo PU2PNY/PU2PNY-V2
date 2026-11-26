@@ -31,7 +31,7 @@ jobs:
           go-version: '1.24.9'
           cache: false
       - name: Install Buildroot dependencies
-        run: sudo apt-get update && sudo apt-get install -y build-essential git bc cpio rsync unzip file wget libncurses-dev python3 xz-utils libssl-dev bison flex qemu-user
+        run: sudo apt-get update && sudo apt-get install -y build-essential git bc cpio rsync unzip file wget libncurses-dev python3 xz-utils libssl-dev bison flex qemu-user dosfstools e2fsprogs
       - name: Install Rust ARMv6 toolchain
         run: rustup toolchain install 1.90.0 --profile minimal --target arm-unknown-linux-gnueabihf
       - name: Fetch pinned upstream release
@@ -78,6 +78,47 @@ jobs:
             qemu-arm -cpu arm1176 -L "$root" "$root/lib/ld-linux-armhf.so.3" --list "$root/usr/local/bin/$binary"
           done
           qemu-arm -cpu arm1176 -L "$root" "$root/usr/local/bin/helix-daemon" --self-test
+      - name: Verify generated SD image
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/br-out"
+          image="$out/measurement/base-arm32.img.xz"
+          xz -t "$image"
+          test "$(stat -c %s "$image")" -le 80000000
+          xz -dc "$image" | cmp - "$out/images/sdcard.img"
+
+          root="$(mktemp -d "$RUNNER_TEMP/root.XXXXXX")"
+          loop="$(sudo losetup --find --show --read-only --partscan "$out/images/sdcard.img")"
+          cleanup() {
+            if mountpoint -q "$root"; then sudo umount "$root"; fi
+            sudo losetup -d "$loop"
+          }
+          trap cleanup EXIT
+          sudo udevadm settle
+          sudo fsck.fat -n "${loop}p1"
+          sudo e2fsck -fn "${loop}p2"
+          sudo mount -o ro,noload "${loop}p2" "$root"
+
+          cmp "$out/target/usr/local/bin/2pnyd" "$root/usr/local/bin/2pnyd"
+          cmp "$out/target/usr/share/2pny/wizard.html" "$root/usr/share/2pny/wizard.html"
+          test "$(readlink "$root/etc/systemd/system/multi-user.target.wants/2pnyd.service")" = ../2pnyd.service
+          test "$(readlink "$root/etc/systemd/system/hostapd.service")" = /dev/null
+          grep -q '^mmdvm:' "$root/etc/passwd"
+          test ! -e "$root/var/lib/2pny/rf-configured"
+          test ! -e "$root/var/lib/2pny/provisioned"
+
+          mkdir "$RUNNER_TEMP/verified-build"
+          mv "$image" "$RUNNER_TEMP/verified-build/pu2pny-v2-arm32-integration.img.xz"
+          cd "$RUNNER_TEMP/verified-build"
+          sha256sum pu2pny-v2-arm32-integration.img.xz > pu2pny-v2-arm32-integration.img.xz.sha256
+          cp "$out/measurement/status.txt" .
+          printf 'source_commit=%s\nphysical_validation=PENDING\n' "$GITHUB_SHA" >> status.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arm32-integration-build-not-release
+          path: ${{ runner.temp }}/verified-build/
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:

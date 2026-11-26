@@ -67,3 +67,5 @@
 - Em teste local ARM1176, o carregador iniciou a resolução de dependências dos seis gateways com a glibc Bootlin e as bibliotecas MQTT/TLS da referência. A verificação usa somente o carregador ELF e não inicia transmissão ou conexão de rádio. O CI repete a verificação com as bibliotecas da imagem Buildroot.
 
 - A integração inclui conta de serviço `mmdvm`, grupos de acesso serial/I²C, fonte OLED, Pillow com FreeType, SMBus compatível e MQTT limitado a localhost. Esses ajustes são do sistema leve. O boot com modem, a persistência após reiniciar e a operação de rádio ainda não foram verificados nesta imagem.
+
+- O CI confere o arquivo XZ contra o cartão gerado, verifica FAT e ext4, remonta a raiz em leitura e confere o painel, as unidades de boot, a conta MMDVM e a ausência de estado de provisionamento. Se passar com até 80 MB, guarda o build e o SHA no Actions para validação de engenharia. A publicação da imagem destinada a instalação permanece condicionada à validação do firmware.
