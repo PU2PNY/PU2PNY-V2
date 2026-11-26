@@ -1,0 +1,27 @@
+name: V2 minimal integration - static software gates
+on:
+  push:
+    branches: [build/v2-full-80mb-integration]
+    paths:
+      - 'panel/**'
+      - 'ci/v2-panel-overlay.py'
+      - 'ci/test-v2-panel-overlay.py'
+      - '.github/workflows/v2-integration-static.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  panel-stage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate stage script and immutable panel routes
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ci/v2-panel-overlay.py ci/test-v2-panel-overlay.py
+          python3 ci/test-v2-panel-overlay.py
+      - name: State the gate accurately
+        run: |
+          echo 'SW static panel stage: PASS (if preceding step passed)'
+          echo 'Full firmware integration, bootable image, RF, size under 80MB: NOT VERIFIED'
