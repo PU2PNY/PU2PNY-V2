@@ -1,0 +1,5 @@
+menu "PU2PNY-V2 packages"
+source "$BR2_EXTERNAL_PU2PNY_V2_PATH/package/pu2pny-mmdvm-host/Config.in"
+source "$BR2_EXTERNAL_PU2PNY_V2_PATH/package/pu2pny-mmdvm-display/Config.in"
+source "$BR2_EXTERNAL_PU2PNY_V2_PATH/package/pu2pny-nextiondriver/Config.in"
+endmenu

@@ -1,0 +1,5 @@
+config BR2_PACKAGE_PU2PNY_NEXTIONDRIVER
+	bool "NextionDriver ON7LDS (PU2PNY)"
+	help
+	  Build the hardened ON7LDS serial display driver. It does not
+	  enable the service or write display firmware.

@@ -1,0 +1,48 @@
+name: V2 Buildroot MMDVM packages
+on:
+  push:
+    branches: [build/v2-full-80mb-integration]
+    paths:
+      - 'buildroot/**'
+      - 'ci/harden-nextiondriver-0.3.31.11[78].py'
+      - '.github/workflows/v2-buildroot-radio.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  armv6:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Buildroot dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential git bc cpio rsync unzip file wget libncurses-dev python3 xz-utils libssl-dev bison flex
+      - name: Fetch pinned Buildroot and compile the MMDVM packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          br="$RUNNER_TEMP/buildroot"
+          out="$RUNNER_TEMP/br-out"
+          git clone --depth 1 --branch 2026.08.2 https://github.com/buildroot/buildroot.git "$br"
+          test "$(git -C "$br" rev-parse HEAD)" = cd8011d7c9965e1bcfc9c18d4272943f9c333b68
+          make -C "$br" O="$out" BR2_EXTERNAL="$GITHUB_WORKSPACE/buildroot" raspberrypi0w_defconfig
+          "$br/utils/config" --file "$out/.config" --enable BR2_PACKAGE_MOSQUITTO \
+            --enable BR2_PACKAGE_PU2PNY_MMDVM_HOST --enable BR2_PACKAGE_PU2PNY_MMDVM_DISPLAY \
+            --enable BR2_PACKAGE_PU2PNY_NEXTIONDRIVER
+          make -C "$out" olddefconfig
+          grep -Fx 'BR2_PACKAGE_PU2PNY_MMDVM_HOST=y' "$out/.config"
+          grep -Fx 'BR2_PACKAGE_PU2PNY_MMDVM_DISPLAY=y' "$out/.config"
+          grep -Fx 'BR2_PACKAGE_PU2PNY_NEXTIONDRIVER=y' "$out/.config"
+          make -C "$out" -j"$(nproc)" pu2pny-mmdvm-host pu2pny-mmdvm-display pu2pny-nextiondriver
+          for binary in MMDVM-Host MMDVM-Display; do
+            path="$out/target/usr/local/bin/$binary"
+            file "$path" | grep -E 'ELF 32-bit.*ARM'
+            readelf -d "$path" | grep -F 'libmosquitto.so.1'
+            stat -c '%n: %s bytes' "$path"
+          done
+          nextion="$out/target/usr/local/bin/NextionDriver-pu2pny"
+          readelf -A "$nextion" | grep -F 'Tag_CPU_arch: v6'
+          strings "$nextion" | grep -Fx '/run/2pny-nextiondriver/ttyNextionDriver'
+          if readelf -Ws "$nextion" | grep -E '[[:space:]](system|popen)@'; then
+            exit 1
+          fi

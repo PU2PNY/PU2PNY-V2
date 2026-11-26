@@ -1,0 +1,10 @@
+config BR2_PACKAGE_PU2PNY_MMDVM_DISPLAY
+	bool "MMDVM-Display"
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_TOOLCHAIN_GCC_AT_LEAST_4_9
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	depends on BR2_PACKAGE_MOSQUITTO
+	select BR2_PACKAGE_JSON_FOR_MODERN_CPP
+	help
+	  Build the pinned MMDVM-Display binary for the existing display
+	  chain. NextionDriver and service configuration are separate.
