@@ -7,7 +7,12 @@
 - Branch TEST-2: `build/v2-test-2`, commit `34e6bab0e1b99e95c1a4b79c11198d8d89f9b90e`.
 - Última publicação V2: `pu2pny-v2-test-2`. Arquivo ARM32 `pu2pny-32-v2-test-2.img.xz` tem **729.802.744 bytes**, embora validado no CI; não atingiu 80 MB. RF/display físico NÃO VERIFICADO na release.
 - Branch mínima: `build/v2-minimal-80mb`, commit `ec944beca0b81c63e8af4d7d131f4f7921c79806`. GitHub Actions `45750785133`: Buildroot 2026.08.2 ARMv6 **BASE_ONLY_NOT_HOTSPOT**, `.img.xz` de **49.381.360 bytes**. Não é imagem operacional de hotspot.
-- Margem matemática restante: **30.618.640 bytes** (limite decimal = 80.000.000 bytes). O cumprimento da meta após integrar os componentes **não foi comprovado**.
+- Margem matemática restante da base mínima: **30.618.640 bytes** (limite decimal = 80.000.000 bytes).
+- Medição isolada adicional: `2pnyd` V2 TEST-2 recompilado para ARMv6, `go test` PASS e ELF ARM32 PASS no run `45789276902`: **7.012.536 bytes** sem compressão, **2.080.152 bytes** com XZ. Não está instalado na imagem mínima; somar tamanhos compactados de peças isoladas **não** substitui medir o conjunto final.
+- Arquivos do painel V2 na árvore Git: **216.562 bytes sem compressão** (16 arquivos de origem; o stager instala 15 destinos). Teste de preparação estática: PASS.
+- Após a medição isolada do `2pnyd`, a margem aritmética aproximada é **28.538.488 bytes**, ANTES dos gateways, display, managers, bibliotecas, configs, Helix, expansão e possíveis diferenças de compressão. **Não é tamanho final verificado**.
+- `ci/v2-full-artifact-gate.py` rejeita imagens incompletas mesmo quando XZ está íntegro e abaixo de 80 MB; CI `45789276902` confirmou `V2_FULL_GATE_FAIL_CLOSED_PASS`. 
+- O cumprimento da meta após integrar **todos** os componentes **não foi comprovado**.
 - Interface V2 aprovada como fonte de UI em `panel/`, commit do HEAD da branch de UI `21fc9bd5cf4374ea507893e6630e322b2957f5b0`. Não inferir que API da UI está implementada por existir botão.
 - Preservar o baseline de Nextion ON7LDS informado em `docs/PU2PNY-OS_UI_CONTRACT.md` (DISPLAY-041 / 5.00.002); não gravar HMI automaticamente nem trocar writer.
 - START_HERE, MASTER_SPEC, RELEASE_STATUS, TEST_MATRIX não foram encontrados sob esses nomes no snapshot V2; `docs/V2_MINIMAL_ACCEPTANCE.md` e contrato de UI são referências disponíveis. Nunca inventar PASS físico.
