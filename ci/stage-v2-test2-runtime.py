@@ -68,9 +68,14 @@ def copy_runtime(baseline, target):
     for name in REQUIRED:
         if not (baseline / name).is_file():
             raise ValueError(f"TEST-2 is missing {name}")
+    legacy_updater = "usr/local/sbin/2pny-update-manager"
     for pattern in RUNTIME:
         for source in sorted(baseline.glob(pattern)):
             name = source.relative_to(baseline)
+            if name.as_posix() == legacy_updater or name.name.startswith(
+                ("2pny-update-entrypoint-", "2pny-update-manager-")
+            ):
+                continue
             # Previous build snapshots and bytecode are not runtime inputs.
             if not source.is_file() or source.is_symlink() or any(
                 ".pre-" in part or part.endswith((".bak", ".pyc")) or part == "__pycache__"

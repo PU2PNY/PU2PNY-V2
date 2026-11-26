@@ -10,7 +10,7 @@ overlay="$(realpath "${1:?Provide a staging directory}")"
 work="$(mktemp -d)"
 trap 'rm -rf -- "$work"' EXIT
 
-python3 "$repo/ci/prepare-v2-test-2-backend.py" "$work" arm32
+python3 "$repo/ci/prepare-v2-test-2-backend.py" "$work" arm32 --buildroot
 cp "$repo/ci/test-v2-full-report.go" "$work/v2_full_report_test.go"
 (
     cd "$work"

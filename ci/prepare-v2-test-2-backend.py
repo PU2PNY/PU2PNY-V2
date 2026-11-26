@@ -29,6 +29,15 @@ case = (
     '\t\treturn\n'
 )
 source = source.replace(anchor, case + anchor, 1)
+if sys.argv[3:] == ["--buildroot"]:
+    update_handler = "func updateStatusHandler("
+    assert source.count(update_handler) == 1, 'review the inherited update handler'
+    source = source.replace(update_handler, "func legacyUpdateStatusHandler(", 1)
+    for name in ("update.go", "update_test.go"):
+        (out / name).write_bytes((repo / "runtime/v2" / name).read_bytes())
+elif sys.argv[3:]:
+    raise SystemExit("Unknown V2 backend option")
+
 main.write_text(source)
 
 (out / 'web_v2report.go').write_bytes((repo / 'runtime/v2/full-report.go').read_bytes())

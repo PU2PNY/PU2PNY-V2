@@ -69,3 +69,5 @@
 - A integração inclui conta de serviço `mmdvm`, grupos de acesso serial/I²C, fonte OLED, Pillow com FreeType, SMBus compatível e MQTT limitado a localhost. Esses ajustes são do sistema leve. O boot com modem, a persistência após reiniciar e a operação de rádio ainda não foram verificados nesta imagem.
 
 - O CI confere o arquivo XZ contra o cartão gerado, verifica FAT e ext4, remonta a raiz em leitura e confere o painel, as unidades de boot, a conta MMDVM e a ausência de estado de provisionamento. Se passar com até 80 MB, guarda o build e o SHA no Actions para validação de engenharia. A publicação da imagem destinada a instalação permanece condicionada à validação do firmware.
+
+- O Buildroot não aceita pacotes OTA da linha Debian 5.x. O backend do build leve informa indisponibilidade no painel e bloqueia a instalação de pacotes incompatíveis. O atualizador da imagem TEST-2 original segue como referência. OTA e rollback da imagem leve ainda têm validação pendente.
