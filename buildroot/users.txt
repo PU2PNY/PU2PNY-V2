@@ -1,0 +1,3 @@
+# User UID  Group GID  Password Home Shell Supplementary groups Comment
+- - i2c -1 - - - - I2C hardware
+mmdvm -1 mmdvm -1 * - - dialout,i2c MMDVM and Nextion services

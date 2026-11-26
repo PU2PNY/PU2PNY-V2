@@ -45,6 +45,7 @@ if overlay:
     overlays = ' '.join(filter(None, (existing, overlay)))
     lines = [line for line in lines if not line.startswith(key)]
     lines.append(f'{key}"{overlays}"')
+    lines.append('BR2_ROOTFS_USERS_TABLES="$(BR2_EXTERNAL_PU2PNY_V2_PATH)/users.txt"')
 p.write_text('\n'.join(lines)+'\n')
 PY
 make -C "$br" O="$out" olddefconfig

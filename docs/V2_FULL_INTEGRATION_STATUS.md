@@ -63,5 +63,7 @@
 
 - Na medição local do TEST-2, a cópia dos blocos alocados por `e2image -ra`, preservando MBR e partição de boot, gerou XZ íntegro de **584.222.128 bytes**. A limpeza de blocos livres, sem mexer nos arquivos, não atinge 80 MB. O overlay aprovado armazenou **642 arquivos**, cerca de **30 MiB** antes da compactação.
 
-- A imagem de integração ativa as unidades originais de primeiro acesso, Wi-Fi e painel. Hostapd e dnsmasq continuam sob o gerenciador PU2PNY, com as unidades independentes bloqueadas. MMDVM e gateways não entram na lista de boot de integração até que a inicialização e seus requisitos de hardware sejam verificados.
+- A imagem de integração ativa as unidades originais de primeiro acesso, Wi-Fi e painel. Hostapd e dnsmasq continuam sob o gerenciador PU2PNY, com as unidades independentes bloqueadas. O MMDVM entra na lista de boot com a condição original de RF configurado. Gateways continuam dependentes dos perfis e o display depende da detecção.
 - Em teste local ARM1176, o carregador iniciou a resolução de dependências dos seis gateways com a glibc Bootlin e as bibliotecas MQTT/TLS da referência. A verificação usa somente o carregador ELF e não inicia transmissão ou conexão de rádio. O CI repete a verificação com as bibliotecas da imagem Buildroot.
+
+- A integração inclui conta de serviço `mmdvm`, grupos de acesso serial/I²C, fonte OLED, Pillow com FreeType, SMBus compatível e MQTT limitado a localhost. Esses ajustes são do sistema leve. O boot com modem, a persistência após reiniciar e a operação de rádio ainda não foram verificados nesta imagem.

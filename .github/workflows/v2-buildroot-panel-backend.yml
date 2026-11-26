@@ -58,14 +58,17 @@ jobs:
           sudo udevadm settle
           sudo mount -o ro,noload "${loop}p2" "$baseline/root"
           bash ci/build-v2-minimal-arm32.sh "$RUNNER_TEMP/buildroot" "$RUNNER_TEMP/br-out" --integration "$baseline/root"
-      - name: Check first-access systemd units
+      - name: Check boot units and Python display dependencies
         shell: bash
         run: |
           set -euo pipefail
           root="$RUNNER_TEMP/br-out/target"
           systemd-analyze --root="$root" --man=no verify \
             2pnyd.service 2pny-network-core.service 2pny-network-manager.service \
-            2pny-network-online.service 2pny-eventd.service
+            2pny-network-online.service 2pny-eventd.service \
+            2pny-mmdvmhost.service 2pny-display-core.service
+          qemu-arm -cpu arm1176 -L "$root" "$root/usr/bin/python3" \
+            -c 'from PIL import Image, ImageFont; import smbus2; assert hasattr(smbus2, "SMBus")'
       - name: Check copied ARMv6 gateways against Buildroot libraries
         shell: bash
         run: |

@@ -17,6 +17,7 @@ RUNTIME = (
     "etc/NetworkManager/conf.d/*2pny*.conf",
     "etc/NetworkManager/dispatcher.d/*2pny*",
     "etc/NetworkManager/dnsmasq-shared.d/2pny-captive.conf",
+    "usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
     "etc/avahi/avahi-daemon.conf", "etc/avahi/services/2pny-http.service",
     "etc/mosquitto/conf.d/pu2pny-local.conf",
     "etc/udev/rules.d/*pu2pny*",
@@ -30,11 +31,16 @@ GATEWAYS = (
     "DAPNETGateway", "P25Gateway", "NXDNGateway", "dgwvoicetransmit",
     "DMR2NXDN", "DMR2YSF", "YSF2DMR", "YSF2NXDN", "YSF2P25",
 )
-FIRST_ACCESS_UNITS = (
+BOOT_UNITS = (
     "2pny-eventd.service", "2pny-network-manager.service",
     "2pny-network-core.service", "2pny-network-online.service",
     "2pny-mdns-alias.service", "2pny-mdns-guard.service",
     "2pny-wifi-retry-reconcile.service", "2pnyd.service",
+    "2pny-hardware-manager.service", "2pny-hardware-detect.service",
+    "2pny-mmdvmhost.service", "2pny-profile-autostart.service",
+    "2pny-operational-restore.service", "2pny-operational-apply.path",
+    "2pny-display-detect.path", "2pny-display-core.service",
+    "2pny-display-reconcile.service", "2pny-display-apply-request.path",
 )
 # TEST-2 delegates AP/DHCP to its network core, not the default daemons.
 MASKED_UNITS = (
@@ -94,12 +100,26 @@ def copy_runtime(baseline, target):
         shutil.copy2(source, dest)
 
 
+    # The original OLED/LCD code uses the SMBus class. Buildroot packages the
+    # compatible Python implementation as smbus2; keep the I2C calls unchanged.
+    for name in ("usr/local/sbin/2pny-display-core", "usr/local/libexec/pu2pny/i2c-505.py"):
+        script = target / name
+        code = script.read_text()
+        if code.count("import smbus\n") != 1:
+            raise ValueError(f"Expected one SMBus import in {name}")
+        script.write_text(code.replace("import smbus\n", "import smbus2 as smbus\n"))
+
     unit_root = target / "etc/systemd/system"
+    # Keep the MQTT listener on localhost, using the baseline config.
+    mqtt = unit_root / "mosquitto.service.d/20-pu2pny.conf"
+    mqtt.parent.mkdir(exist_ok=True)
+    mqtt.write_text("[Service]\nExecStart=\n"
+                    "ExecStart=/usr/sbin/mosquitto -c /etc/mosquitto/conf.d/pu2pny-local.conf\n")
     wants = unit_root / "multi-user.target.wants"
     wants.mkdir(exist_ok=True)
-    for name in FIRST_ACCESS_UNITS:
+    for name in BOOT_UNITS:
         if not (unit_root / name).is_file():
-            raise ValueError(f"Missing first-access unit: {name}")
+            raise ValueError(f"Missing boot unit: {name}")
         (wants / name).symlink_to(Path("..") / name)
     for name in MASKED_UNITS:
         if not (baseline / "etc/systemd/system" / name).is_symlink():
