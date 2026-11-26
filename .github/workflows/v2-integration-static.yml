@@ -6,6 +6,8 @@ on:
       - 'panel/**'
       - 'ci/v2-panel-overlay.py'
       - 'ci/test-v2-panel-overlay.py'
+      - 'ci/v2-full-artifact-gate.py'
+      - 'ci/test-v2-full-artifact-gate.py'
       - '.github/workflows/v2-integration-static.yml'
       - 'ci/prepare-v2-test-2-backend.py'
       - 'ci/prepare-v2-backend.py'
@@ -22,8 +24,9 @@ jobs:
       - name: Validate stage script and immutable panel routes
         run: |
           set -euo pipefail
-          python3 -m py_compile ci/v2-panel-overlay.py ci/test-v2-panel-overlay.py
+          python3 -m py_compile ci/v2-panel-overlay.py ci/test-v2-panel-overlay.py ci/v2-full-artifact-gate.py ci/test-v2-full-artifact-gate.py
           python3 ci/test-v2-panel-overlay.py
+          python3 ci/test-v2-full-artifact-gate.py
       - name: State the gate accurately
         run: |
           echo 'SW static panel stage: PASS (if preceding step passed)'
@@ -48,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 ci/prepare-v2-test-2-backend.py "$RUNNER_TEMP/backend" arm32
-          (cd "$RUNNER_TEMP/backend" && go test ./... && go build -trimpath -ldflags='-s -w' -o "$RUNNER_TEMP/2pnyd" .)
+          (cd "$RUNNER_TEMP/backend" && env -u GOOS -u GOARCH -u GOARM go test ./... && go build -trimpath -ldflags='-s -w' -o "$RUNNER_TEMP/2pnyd" .)
           file "$RUNNER_TEMP/2pnyd" | grep -E 'ELF 32-bit.*ARM'
           xz -T1 -9 -c "$RUNNER_TEMP/2pnyd" > "$RUNNER_TEMP/2pnyd.xz"
           echo "BACKEND_ONLY_NOT_BOOTABLE"
