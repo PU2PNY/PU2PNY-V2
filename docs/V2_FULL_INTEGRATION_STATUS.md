@@ -21,8 +21,8 @@
 | Bloco | Estado no Buildroot mínimo | Exigência |
 |---|---|---|
 | Kernel/boot ARMv6, systemd, Python e utilitários de rede | Base gerada; boot no HW não verificado | Confirmar boot e módulos |
-| Painel V2 PT/EN/ES | Fontes disponíveis; *stager* isolado adicionado | Integrar ao daemon e testar todas as rotas/APIs |
-| 2pnyd/Go/API e persistência | Não integrado à base mínima | Compilar ARMv6/ARM64 e validar endpoints/estado real |
+| Painel V2 PT/EN/ES | Painel e binário empacotados juntos no overlay ARMv6, verificados em SW | Validar rotas no sistema inicializado, incluindo assistente e páginas auxiliares |
+| 2pnyd/Go/API e persistência | ARMv6 compilado e empacotado; serviço ainda desativado no boot | Integrar dependências do serviço, persistência e validar API/estado real |
 | MMDVMHost + modem e RF | Não integrado | Compilar compatível e preservar DMR/D-Star/YSF |
 | DMR, D-Star, YSF, P25, NXDN, POCSAG | Não integrados | Gateways reais; ativação sob demanda, sem alegar RF PASS |
 | Wi-Fi/AP/STA/Ethernet/mDNS, backup de 2 redes | Pacotes Linux presentes; managers PU2PNY ainda ausentes | Testar rollback e handoff |
@@ -37,7 +37,11 @@
 3. Integrar todos os componentes e testar SW/VPS/CI; verificar `.img.xz` real por `stat`, `xz -t`, SHA-256 e montagem. **Tamanho <= 80.000.000 bytes em cada arquitetura**.
 4. Se faltar qualquer componente essencial, funcionalidade ou teste de integridade, não publicar release completa.
 5. ARM32 e ARM64 são imagens independentes. Nextion, RF, modem e display físico ficam como HW PENDENTE até evidência.
-6. Evitar incluir o gerador atual de relatório TEST-2 sem sanitização: `ci/prepare-v2-test-2-backend.py` contém `fileSec("CONFIG (config.json)", configFile)` e logs brutos potencialmente sensíveis. Deve ser corrigido e testado antes de portá-lo.
+6. O novo relatório em `runtime/v2/full-report.go` exporta protocolo conhecido, estados de serviços e portas UDP locais. A release TEST-2 existente ainda inclui o relatório antigo, que pode expor credenciais. Não compartilhar exportações brutas daquela imagem.
 
-## Mudança nesta branch de integração
-`ci/v2-panel-overlay.py` prepara a interface V2 para um rootfs limpo, sem depender da imagem Debian de 729 MB. **Não inicia serviços, não contém backend nem é uma imagem completa.** Trabalho restante deve permanecer documentado, sem promessas de status PASS.
+## Integração nesta branch
+
+- `ci/stage-v2-arm32.sh` prepara um overlay com as 15 páginas e arquivos estáticos do painel, o binário ARMv6 de 2pnyd e a unidade systemd. A unidade não é ativada no boot até a integração de suas dependências. O build Buildroot com `--panel-backend` compara os arquivos empacotados aos do overlay e mede o conjunto, sem publicar imagem.
+- Validado localmente com Go 1.24.9: `go test`, executável estático ELF ARM32, `GOARM=6`, teste do overlay e rejeição de imagem incompleta. Daemon novo: **7.012.536 bytes**, **2.079.236 bytes** com XZ. O total da imagem continua sem comprovação.
+- O próximo ponto de integração é migrar o primeiro acesso e rede para a base Buildroot. Portar o gerenciador de Wi-Fi e as dependências de AP/STA e DHCP, integrar o assistente e validar duas redes com rollback antes de ativar o serviço do painel no boot. Em seguida, integrar RF e os gateways sem alterar o comportamento aprovado, displays e serviços restantes conforme a matriz.
+- A última TEST-2 foi baixada e conferida: XZ íntegro, 729.802.744 bytes, SHA-256 `966d9d502508d4254712b89cdc57e30e5c48d57b544134667827e2af5c166261`.

@@ -1,0 +1,8 @@
+[Unit]
+Description=PU2PNY-V2 hotspot panel and API
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/2pnyd
+Restart=on-failure
+UMask=0027

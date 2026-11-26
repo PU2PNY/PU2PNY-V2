@@ -1,0 +1,43 @@
+name: V2 Buildroot panel and backend measurement
+on:
+  push:
+    branches: [build/v2-full-80mb-integration]
+    paths:
+      - 'panel/**'
+      - 'runtime/v2/**'
+      - 'ci/stage-v2-arm32.sh'
+      - 'ci/build-v2-minimal-arm32.sh'
+      - 'ci/minimal-arm32.fragment'
+      - 'ci/v2-panel-overlay.py'
+      - 'ci/prepare-*-backend.py'
+      - 'ci/test-v2-full-report.go'
+      - '.github/workflows/v2-buildroot-panel-backend.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+          cache: false
+      - name: Install Buildroot dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential git bc cpio rsync unzip file wget libncurses-dev python3 xz-utils libssl-dev bison flex
+      - name: Fetch pinned upstream release
+        run: |
+          git clone --depth 1 --branch 2026.08.2 https://github.com/buildroot/buildroot.git "$RUNNER_TEMP/buildroot"
+          test "$(git -C "$RUNNER_TEMP/buildroot" rev-parse HEAD)" = cd8011d7c9965e1bcfc9c18d4272943f9c333b68
+      - name: Build and measure partial ARMv6 integration
+        run: bash ci/build-v2-minimal-arm32.sh "$RUNNER_TEMP/buildroot" "$RUNNER_TEMP/br-out" --panel-backend
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arm32-panel-backend-measurement
+          path: |
+            ${{ runner.temp }}/br-out/measurement/status.txt
+            ${{ runner.temp }}/br-out/measurement/size-breakdown.txt
+          if-no-files-found: warn

@@ -12,6 +12,9 @@ on:
       - 'ci/prepare-v2-test-2-backend.py'
       - 'ci/prepare-v2-backend.py'
       - 'ci/prepare-5.15-backend.py'
+      - 'ci/stage-v2-arm32.sh'
+      - 'ci/test-v2-full-report.go'
+      - 'runtime/v2/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -40,21 +43,12 @@ jobs:
         with:
           go-version: '1.24.9'
           cache: false
-      - name: Measure real V2 API daemon without deploying it
-        shell: bash
-        env:
-          GO111MODULE: 'off'
-          CGO_ENABLED: '0'
-          GOOS: linux
-          GOARCH: arm
-          GOARM: '6'
+      - name: Test and stage ARMv6 panel and backend
         run: |
           set -euo pipefail
-          python3 ci/prepare-v2-test-2-backend.py "$RUNNER_TEMP/backend" arm32
-          (cd "$RUNNER_TEMP/backend" && env -u GOOS -u GOARCH -u GOARM go test ./... && go build -trimpath -ldflags='-s -w' -o "$RUNNER_TEMP/2pnyd" .)
-          file "$RUNNER_TEMP/2pnyd" | grep -E 'ELF 32-bit.*ARM'
-          xz -T1 -9 -c "$RUNNER_TEMP/2pnyd" > "$RUNNER_TEMP/2pnyd.xz"
-          echo "BACKEND_ONLY_NOT_BOOTABLE"
-          stat -c 'backend_binary_bytes=%s' "$RUNNER_TEMP/2pnyd"
+          mkdir "$RUNNER_TEMP/overlay"
+          bash ci/stage-v2-arm32.sh "$RUNNER_TEMP/overlay"
+          backend="$RUNNER_TEMP/overlay/usr/local/bin/2pnyd"
+          xz -T1 -9 -c "$backend" > "$RUNNER_TEMP/2pnyd.xz"
+          stat -c 'backend_binary_bytes=%s' "$backend"
           stat -c 'backend_compressed_bytes=%s' "$RUNNER_TEMP/2pnyd.xz"
-          echo "SECURITY: do not ship TEST-2 full-report until sensitive data are sanitized"
