@@ -7,6 +7,9 @@ on:
       - 'ci/v2-panel-overlay.py'
       - 'ci/test-v2-panel-overlay.py'
       - '.github/workflows/v2-integration-static.yml'
+      - 'ci/prepare-v2-test-2-backend.py'
+      - 'ci/prepare-v2-backend.py'
+      - 'ci/prepare-5.15-backend.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,3 +28,30 @@ jobs:
         run: |
           echo 'SW static panel stage: PASS (if preceding step passed)'
           echo 'Full firmware integration, bootable image, RF, size under 80MB: NOT VERIFIED'
+  backend-armv6-measurement:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+          cache: false
+      - name: Measure real V2 API daemon without deploying it
+        shell: bash
+        env:
+          GO111MODULE: 'off'
+          CGO_ENABLED: '0'
+          GOOS: linux
+          GOARCH: arm
+          GOARM: '6'
+        run: |
+          set -euo pipefail
+          python3 ci/prepare-v2-test-2-backend.py "$RUNNER_TEMP/backend" arm32
+          (cd "$RUNNER_TEMP/backend" && go test ./... && go build -trimpath -ldflags='-s -w' -o "$RUNNER_TEMP/2pnyd" .)
+          file "$RUNNER_TEMP/2pnyd" | grep -E 'ELF 32-bit.*ARM'
+          xz -T1 -9 -c "$RUNNER_TEMP/2pnyd" > "$RUNNER_TEMP/2pnyd.xz"
+          echo "BACKEND_ONLY_NOT_BOOTABLE"
+          stat -c 'backend_binary_bytes=%s' "$RUNNER_TEMP/2pnyd"
+          stat -c 'backend_compressed_bytes=%s' "$RUNNER_TEMP/2pnyd.xz"
+          echo "SECURITY: do not ship TEST-2 full-report until sensitive data are sanitized"
