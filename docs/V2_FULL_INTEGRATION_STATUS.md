@@ -5,7 +5,7 @@
 ## Baselines e evidência verificadas
 - Repositório: `PU2PNY/PU2PNY-V2`.
 - Branch TEST-2: `build/v2-test-2`, commit `34e6bab0e1b99e95c1a4b79c11198d8d89f9b90e`.
-- Última publicação V2: `pu2pny-v2-test-2`. Arquivo ARM32 `pu2pny-32-v2-test-2.img.xz` tem **729.802.744 bytes**, embora validado no CI; não atingiu 80 MB. RF/display físico NÃO VERIFICADO na release.
+- Última publicação V2: `pu2pny-v2-test-2`. Arquivo ARM32 `pu2pny-32-v2-test-2.img.xz` tem **729.802.744 bytes**, embora validado no CI; não atingiu 80 MB. TEST-2 aprovado em hardware pelo mantenedor em 26/11/2026. O relato aprova a imagem como baseline, sem detalhar resultados por função; a própria release conserva a classificação original.
 - Branch mínima: `build/v2-minimal-80mb`, commit `ec944beca0b81c63e8af4d7d131f4f7921c79806`. GitHub Actions `45750785133`: Buildroot 2026.08.2 ARMv6 **BASE_ONLY_NOT_HOTSPOT**, `.img.xz` de **49.381.360 bytes**. Não é imagem operacional de hotspot.
 - Margem matemática restante da base mínima: **30.618.640 bytes** (limite decimal = 80.000.000 bytes).
 - Medição isolada adicional: `2pnyd` V2 TEST-2 recompilado para ARMv6, `go test` PASS e ELF ARM32 PASS no run `45789276902`: **7.012.536 bytes** sem compressão, **2.080.152 bytes** com XZ. Não está instalado na imagem mínima; somar tamanhos compactados de peças isoladas **não** substitui medir o conjunto final.
@@ -54,3 +54,11 @@
 - Na imagem TEST-2, `2pny-network-core.service` e `2pny-network-manager.service` dependem de NetworkManager. A base mínima ainda não inclui NetworkManager e o serviço gerenciador também requer `2pny-eventd`. A migração precisa portar esses componentes com seus estados e testar o comportamento de Wi-Fi/AP, em particular `nmcli`, `flock`, `rfkill`, regras de encaminhamento e os caminhos de firmware. O CI de software não valida RF, UART, rede sem fio física ou a tela.
 
 - `ci/v2-arm32-integration.fragment` seleciona NetworkManager/nmcli, D-Bus do wpa_supplicant, Avahi, DHCP do dnsmasq, rfkill, flock e iptables junto aos três pacotes MMDVM/Nextion. Esses pacotes são dependências da migração; os scripts, configurações e serviços PU2PNY de rede e rádio ainda precisam ser integrados e validados.
+
+## Baseline aprovado e geração da imagem leve
+
+- O runtime do TEST-2 agora entra na compilação de integração a partir da imagem de referência com SHA-256 fixo, lida sem gravações. O overlay leva assistente, scripts, unidades e gateways ARMv6. O backend usa a revisão sanitizada. A etapa de migração não importa perfis, senhas ou estado do usuário.
+- As unidades de rede, painel e RF ainda precisam de validação de boot como conjunto. A imagem de integração conserva a classificação de build; a aprovação física do TEST-2 não se transfere à base Buildroot.
+- No TEST-2, o executável Helix usa ARMv7 segundo `readelf -A`. O Pi Zero W necessita de um build ARMv6 para esse componente. Ele fica fora do overlay de integração e não pode ser descrito como disponível no Pi Zero W até que um novo binário seja validado.
+
+- Na medição local do TEST-2, a cópia dos blocos alocados por `e2image -ra`, preservando MBR e partição de boot, gerou XZ íntegro de **584.222.128 bytes**. A limpeza de blocos livres, sem mexer nos arquivos, não atinge 80 MB. O overlay aprovado armazenou **642 arquivos**, cerca de **30 MiB** antes da compactação.

@@ -8,15 +8,20 @@ status="BASE_ONLY_NOT_HOTSPOT"
 overlay=""
 fragments=("$repo/ci/minimal-arm32.fragment")
 external=()
-if [[ ${3:-} == --integration ]]; then
+if [[ ${3:-} == --integration && $# == 4 ]]; then
     overlay="$(mktemp -d)"
     trap 'rm -rf -- "$overlay"' EXIT
     bash "$repo/ci/stage-v2-arm32.sh" "$overlay"
-    status="PARTIAL_INTEGRATION_NOT_HOTSPOT"
+    staged="$(mktemp -d)"
+    trap 'rm -rf -- "$overlay" "$staged"' EXIT
+    python3 "$repo/ci/stage-v2-test2-runtime.py" "$4" "$staged"
+    rm -f "$staged/etc/systemd/system/2pnyd.service"
+    cp -an "$staged/." "$overlay/"
+    status="TEST2_RUNTIME_INTEGRATION_NOT_RELEASED"
     fragments+=("$repo/ci/v2-arm32-integration.fragment")
     external=(BR2_EXTERNAL="$repo/buildroot")
 elif (( $# != 2 )); then
-    echo "Usage: $0 BUILDROOT OUT [--integration]" >&2
+    echo "Usage: $0 BUILDROOT OUT [--integration TEST2_ROOTFS]" >&2
     exit 2
 fi
 mkdir -p "$out"
@@ -59,6 +64,9 @@ if [[ -n "$overlay" ]]; then
         file "$out/target/usr/local/bin/$binary" | grep -E 'ELF 32-bit.*ARM'
     done
     test -x "$out/target/usr/bin/nmcli"
+    test -x "$out/target/usr/local/sbin/2pny-network-core"
+    test -x "$out/target/usr/local/bin/DMRGateway"
+    test -s "$out/target/usr/share/2pny/wizard.html"
 fi
 mkdir -p "$out/measurement"
 xz -T2 -9 -c "$out/images/sdcard.img" > "$out/measurement/base-arm32.img.xz"

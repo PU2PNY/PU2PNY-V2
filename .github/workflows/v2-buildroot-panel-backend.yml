@@ -6,6 +6,7 @@ on:
       - 'panel/**'
       - 'runtime/v2/**'
       - 'ci/stage-v2-arm32.sh'
+      - 'ci/stage-v2-test2-runtime.py'
       - 'ci/build-v2-minimal-arm32.sh'
       - 'ci/minimal-arm32.fragment'
       - 'ci/v2-arm32-integration.fragment'
@@ -29,13 +30,39 @@ jobs:
           go-version: '1.24.9'
           cache: false
       - name: Install Buildroot dependencies
-        run: sudo apt-get update && sudo apt-get install -y build-essential git bc cpio rsync unzip file wget libncurses-dev python3 xz-utils libssl-dev bison flex
+        run: sudo apt-get update && sudo apt-get install -y build-essential git bc cpio rsync unzip file wget libncurses-dev python3 xz-utils libssl-dev bison flex qemu-user
       - name: Fetch pinned upstream release
         run: |
           git clone --depth 1 --branch 2026.08.2 https://github.com/buildroot/buildroot.git "$RUNNER_TEMP/buildroot"
           test "$(git -C "$RUNNER_TEMP/buildroot" rev-parse HEAD)" = cd8011d7c9965e1bcfc9c18d4272943f9c333b68
-      - name: Build and measure partial ARMv6 integration
-        run: bash ci/build-v2-minimal-arm32.sh "$RUNNER_TEMP/buildroot" "$RUNNER_TEMP/br-out" --integration
+      - name: Build and measure TEST-2 runtime on Buildroot
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$(mktemp -d "$RUNNER_TEMP/test2.XXXXXX")"
+          loop=""
+          cleanup() {
+            if mountpoint -q "$baseline/root"; then sudo umount "$baseline/root"; fi
+            if [[ -n "$loop" ]]; then sudo losetup -d "$loop"; fi
+          }
+          trap cleanup EXIT
+          curl -fLSs --retry 3 -o "$baseline/test2.img.xz" \
+            https://github.com/PU2PNY/PU2PNY-V2/releases/download/pu2pny-v2-test-2/pu2pny-32-v2-test-2.img.xz
+          printf '%s  %s\n' 966d9d502508d4254712b89cdc57e30e5c48d57b544134667827e2af5c166261 "$baseline/test2.img.xz" | sha256sum -c
+          xz -dc "$baseline/test2.img.xz" > "$baseline/test2.img"
+          loop="$(sudo losetup --find --show --read-only --partscan "$baseline/test2.img")"
+          mkdir "$baseline/root"
+          sudo udevadm settle
+          sudo mount -o ro,noload "${loop}p2" "$baseline/root"
+          bash ci/build-v2-minimal-arm32.sh "$RUNNER_TEMP/buildroot" "$RUNNER_TEMP/br-out" --integration "$baseline/root"
+      - name: Check copied ARMv6 gateways against Buildroot libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/br-out/target"
+          for binary in DMRGateway dstargateway YSFGateway DAPNETGateway P25Gateway NXDNGateway; do
+            qemu-arm -cpu arm1176 -L "$root" "$root/lib/ld-linux-armhf.so.3" --list "$root/usr/local/bin/$binary"
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
