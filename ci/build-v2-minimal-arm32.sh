@@ -54,13 +54,17 @@ for fragment in "${fragments[@]}"; do
         grep -Fxq "$line" "$out/.config" || { echo "Unresolved Buildroot option: $line" >&2; exit 1; }
     done < "$fragment"
 done
+if [[ -n "$overlay" ]]; then
+    make -C "$br" O="$out" -j "$(nproc)" toolchain
+    bash "$repo/ci/build-v2-helix-arm32.sh"         "$out/host/bin/arm-linux-gcc" "$overlay/usr/local/bin/helix-daemon"
+fi
 make -C "$br" O="$out" -j "$(nproc)"
 test -s "$out/images/sdcard.img"
 if [[ -n "$overlay" ]]; then
     cmp "$overlay/usr/local/bin/2pnyd" "$out/target/usr/local/bin/2pnyd"
     cmp "$overlay/etc/systemd/system/2pnyd.service" "$out/target/etc/systemd/system/2pnyd.service"
     diff -r "$overlay/usr/share/2pny" "$out/target/usr/share/2pny"
-    for binary in MMDVM-Host MMDVM-Display NextionDriver-pu2pny; do
+    for binary in MMDVM-Host MMDVM-Display NextionDriver-pu2pny helix-daemon; do
         file "$out/target/usr/local/bin/$binary" | grep -E 'ELF 32-bit.*ARM'
     done
     test -x "$out/target/usr/bin/nmcli"

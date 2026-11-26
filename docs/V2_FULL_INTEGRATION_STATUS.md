@@ -59,6 +59,6 @@
 
 - O runtime do TEST-2 agora entra na compilação de integração a partir da imagem de referência com SHA-256 fixo, lida sem gravações. O overlay leva assistente, scripts, unidades e gateways ARMv6. O backend usa a revisão sanitizada. A etapa de migração não importa perfis, senhas ou estado do usuário.
 - As unidades de rede, painel e RF ainda precisam de validação de boot como conjunto. A imagem de integração conserva a classificação de build; a aprovação física do TEST-2 não se transfere à base Buildroot.
-- No TEST-2, o executável Helix usa ARMv7 segundo `readelf -A`. O Pi Zero W necessita de um build ARMv6 para esse componente. Ele fica fora do overlay de integração e não pode ser descrito como disponível no Pi Zero W até que um novo binário seja validado.
+- No TEST-2, o Helix usava ARMv7. O mesmo código de referência `b71a5fccd6371a88284866510000302f0126d565` agora é compilado para ARMv6. Passaram 47 testes de software e o autoteste do executável no QEMU com CPU ARM1176. Os modos permanecem desativados por padrão. A integração com hardware e com o rádio segue pendente.
 
 - Na medição local do TEST-2, a cópia dos blocos alocados por `e2image -ra`, preservando MBR e partição de boot, gerou XZ íntegro de **584.222.128 bytes**. A limpeza de blocos livres, sem mexer nos arquivos, não atinge 80 MB. O overlay aprovado armazenou **642 arquivos**, cerca de **30 MiB** antes da compactação.

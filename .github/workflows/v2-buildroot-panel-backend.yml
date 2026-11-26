@@ -6,6 +6,7 @@ on:
       - 'panel/**'
       - 'runtime/v2/**'
       - 'ci/stage-v2-arm32.sh'
+      - 'ci/build-v2-helix-arm32.sh'
       - 'ci/stage-v2-test2-runtime.py'
       - 'ci/build-v2-minimal-arm32.sh'
       - 'ci/minimal-arm32.fragment'
@@ -31,6 +32,8 @@ jobs:
           cache: false
       - name: Install Buildroot dependencies
         run: sudo apt-get update && sudo apt-get install -y build-essential git bc cpio rsync unzip file wget libncurses-dev python3 xz-utils libssl-dev bison flex qemu-user
+      - name: Install Rust ARMv6 toolchain
+        run: rustup toolchain install 1.90.0 --profile minimal --target arm-unknown-linux-gnueabihf
       - name: Fetch pinned upstream release
         run: |
           git clone --depth 1 --branch 2026.08.2 https://github.com/buildroot/buildroot.git "$RUNNER_TEMP/buildroot"
@@ -63,6 +66,7 @@ jobs:
           for binary in DMRGateway dstargateway YSFGateway DAPNETGateway P25Gateway NXDNGateway; do
             qemu-arm -cpu arm1176 -L "$root" "$root/lib/ld-linux-armhf.so.3" --list "$root/usr/local/bin/$binary"
           done
+          qemu-arm -cpu arm1176 -L "$root" "$root/usr/local/bin/helix-daemon" --self-test
       - uses: actions/upload-artifact@v4
         if: always()
         with:
