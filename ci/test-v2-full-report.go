@@ -31,3 +31,10 @@ func TestV2ReportMatchesOnlyLocalUDPPort(t *testing.T) {
 		t.Fatalf("mistook peer port for local port: %q", got)
 	}
 }
+
+func TestV2NetworkReconnectUsesItsOwnHostname(t *testing.T) {
+	got := lanResumeURLs([]string{"192.168.1.10", "192.168.1.10", "10.43.0.1"})
+	if len(got) != 2 || got[0] != "http://pu2pny-v2.local" || got[1] != "http://192.168.1.10" {
+		t.Fatalf("unexpected reconnect URLs: %v", got)
+	}
+}

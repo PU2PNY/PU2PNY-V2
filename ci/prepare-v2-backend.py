@@ -38,5 +38,11 @@ routes = anchor + ''.join(
 )
 replace(anchor, routes)
 
+# TEST-2 uses a distinct hostname from the legacy board-32 hotspot.
+if arch == 'arm32':
+    legacy_host = 'pu2pny32.local'
+    assert source.count(legacy_host) == 3, 'review V2 reconnect URLs'
+    source = source.replace(legacy_host, 'pu2pny-v2.local')
+
 main.write_text(source)
 print("PREPARE_V2_BACKEND_OK", arch)
