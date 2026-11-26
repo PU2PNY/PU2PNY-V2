@@ -17,6 +17,7 @@ if [[ ${3:-} == --integration && $# == 4 ]]; then
     python3 "$repo/ci/stage-v2-test2-runtime.py" "$4" "$staged"
     rm -f "$overlay/etc/systemd/system/2pnyd.service"
     cp -an "$staged/." "$overlay/"
+    bash "$repo/ci/stage-v2-zero-w-wifi.sh" "$4" "$overlay"
     status="TEST2_RUNTIME_INTEGRATION_NOT_RELEASED"
     fragments+=("$repo/ci/v2-arm32-integration.fragment")
     external=(BR2_EXTERNAL="$repo/buildroot")

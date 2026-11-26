@@ -71,3 +71,7 @@
 - O CI confere o arquivo XZ contra o cartão gerado, verifica FAT e ext4, remonta a raiz em leitura e confere o painel, as unidades de boot, a conta MMDVM e a ausência de estado de provisionamento. Se passar com até 80 MB, guarda o build e o SHA no Actions para validação de engenharia. A publicação da imagem destinada a instalação permanece condicionada à validação do firmware.
 
 - O Buildroot não aceita pacotes OTA da linha Debian 5.x. O backend do build leve informa indisponibilidade no painel e bloqueia a instalação de pacotes incompatíveis. O atualizador da imagem TEST-2 original segue como referência. OTA e rollback da imagem leve ainda têm validação pendente.
+
+## Correção do AP no Pi Zero W
+
+Na imagem ARM32 de `d0205ac`, o módulo `brcmfmac` estava presente, mas faltavam o firmware BCM43430 e o NVRAM específico do Pi Zero W. O build passa a empacotar o binário, o CLM e o NVRAM extraídos do TEST-2 aprovado. A validação do cartão verifica esses três arquivos, o módulo e o SSID do AP. O teste físico da rede PU2PNY-V2 continua pendente.

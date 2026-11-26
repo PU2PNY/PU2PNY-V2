@@ -8,6 +8,7 @@ on:
       - 'ci/stage-v2-arm32.sh'
       - 'ci/build-v2-helix-arm32.sh'
       - 'ci/stage-v2-test2-runtime.py'
+      - 'ci/stage-v2-zero-w-wifi.sh'
       - 'ci/build-v2-minimal-arm32.sh'
       - 'ci/minimal-arm32.fragment'
       - 'ci/v2-arm32-integration.fragment'
@@ -105,6 +106,12 @@ jobs:
           test "$(readlink "$root/etc/systemd/system/multi-user.target.wants/2pnyd.service")" = ../2pnyd.service
           test "$(readlink "$root/etc/systemd/system/hostapd.service")" = /dev/null
           grep -q '^mmdvm:' "$root/etc/passwd"
+          for firmware in brcmfmac43430-sdio.bin brcmfmac43430-sdio.clm_blob \
+            brcmfmac43430-sdio.raspberrypi,model-zero-w.txt; do
+            test -s "$root/lib/firmware/brcm/$firmware"
+          done
+          grep -q 'brcmfmac/brcmfmac.ko' "$root"/lib/modules/*/modules.dep
+          grep -Fxq 'ssid=PU2PNY-V2' "$root/usr/share/2pny/network/hostapd.template"
           test ! -e "$root/var/lib/2pny/rf-configured"
           test ! -e "$root/var/lib/2pny/provisioned"
 
