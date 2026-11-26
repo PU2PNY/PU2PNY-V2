@@ -1,0 +1,30 @@
+name: Minimal ARM32 Buildroot base measurement
+on:
+  push:
+    branches: [build/v2-minimal-80mb]
+    paths: ['ci/build-v2-minimal-arm32.sh', 'ci/minimal-arm32.fragment', '.github/workflows/v2-minimal-arm32.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  base:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential git bc cpio rsync unzip file wget libncurses-dev python3 xz-utils libssl-dev bison flex
+      - name: Fetch pinned upstream release
+        run: git clone --depth 1 --branch 2026.08.2 https://github.com/buildroot/buildroot.git "$RUNNER_TEMP/buildroot"
+      - name: Build and measure ARMv6 base (not a hotspot)
+        run: bash ci/build-v2-minimal-arm32.sh "$RUNNER_TEMP/buildroot" "$RUNNER_TEMP/br-out"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arm32-base-measurement-not-release
+          path: |
+            ${{ runner.temp }}/br-out/measurement/status.txt
+            ${{ runner.temp }}/br-out/measurement/size-breakdown.txt
+            ${{ runner.temp }}/br-out/.config
+          include-hidden-files: true
+          if-no-files-found: warn
