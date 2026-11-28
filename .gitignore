@@ -4,3 +4,4 @@ __pycache__/
 /output/
 *.img
 *.img.xz
+third_party/xombe/build*/
