@@ -1,0 +1,131 @@
+<!doctype html><html lang="pt-BR" data-theme="dark" class="pny-i18n-pending"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark light"><title>PU2PNY-V2</title>
+<link rel="icon" type="image/png" href="favicon.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>(function(){document.documentElement.setAttribute('data-theme',localStorage.getItem('pu2pny-theme')||'dark')})();</script>
+<link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="pny-v2.css">
+<style>
+.stateflow{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.stateflow span{padding:5px 8px;border:1px solid var(--line);border-radius:999px;font-size:11px;color:var(--muted)}.stateflow span.active{border-color:var(--blue);color:var(--text);background:color-mix(in srgb,var(--blue) 12%,transparent)}
+.rangeval{display:flex;gap:10px;align-items:center}.rangeval input[type=range]{flex:1}
+.screenpreview{min-height:150px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(155deg,#071018,#111827);padding:16px;color:#e5f4ff}.screenpreview .screen{border:2px solid #334155;border-radius:10px;min-height:118px;padding:12px;box-shadow:inset 0 0 28px rgba(56,189,248,.08);transition:transform .25s ease;transform-origin:center}.screenpreview .screen b{font-size:20px}
+</style></head><body><div class="shell">
+<header class="topnav">
+  <div class="brand"><img class="brandmark" src="favicon.png" alt="PU2PNY"><span class="brandtext"><b style="font-size:19px">PU2PNY-V2</b><small>Display / Nextion</small></span></div>
+  <nav class="nav" id="mainNav"></nav>
+  <div class="navtools"><span class="pill"><span id="clockLocal">--:--:--</span></span><button class="btn" id="themeToggle">☀ Claro</button></div>
+</header>
+<main class="main">
+<div class="top"><div><h1>Display</h1><p>Detecção automática, brilho, rotação e informações do MMDVM em todas as telas.</p></div>
+  <div class="actions"><button class="btn" id="detect">Detectar display</button><button class="btn" id="rescan">Redetectar hardware</button></div></div>
+
+<section class="section"><div class="grid2">
+<article class="card"><div class="sectionhead"><h2>Estado atual</h2><span class="pill" id="writer">writer —</span></div>
+  <div class="big" id="state">Verificando...</div>
+  <div class="stateflow" id="flow"><span data-state="detecting">Detectando</span><span data-state="identified">Identificado</span><span data-state="ready">Pronto</span><span data-state="error">Erro</span></div>
+  <div class="rows" style="margin-top:12px">
+    <div class="row" data-real-only><span>Tipo</span><b id="type">—</b></div>
+    <div class="row" data-real-only><span>Modelo</span><b id="model">—</b></div>
+    <div class="row" data-real-only><span>Resolução</span><b id="resolution">—</b></div>
+    <div class="row" data-real-only><span>Integração</span><b id="integration">—</b></div>
+    <div class="row" data-real-only><span>Driver</span><b id="driver">—</b></div>
+    <div class="row" data-real-only><span>Porta MMDVM</span><b id="port">—</b></div></div>
+  <p id="runtimeMessage" class="statusmsg"></p>
+</article>
+
+<article class="card"><h2>Prévia</h2><div class="screenpreview"><div class="screen" id="screen"><small>PU2PNY · STANDBY</small><br><b id="previewProto">DMR</b><p id="previewText">Indicativo · destino · duração · BER/RSSI quando disponíveis.</p></div></div>
+  <p class="muted">A prévia é conceitual. O conteúdo físico usa somente dados reais do snapshot Ao Vivo.</p></article>
+</div></section>
+
+<section class="section"><article class="card">
+  <h2>Configuração do display</h2>
+  <p class="muted">A MMDVMHost continua dona da porta serial. O sistema impede dois renderizadores simultâneos e só confirma a tela física após retorno COMOK.</p>
+
+  <label style="margin-top:12px">Tipo de tela</label>
+  <div class="segrow" id="screenType" role="group" aria-label="Tipo de tela"><button type="button" data-t="oled" class="active">OLED</button><button type="button" data-t="led">LED</button><button type="button" data-t="nextion">Nextion</button></div>
+
+  <div id="nextionBlock" class="hidden" style="margin-top:12px">
+    <label><input id="enabled" type="checkbox" style="width:auto"> Usar Nextion pela MMDVM</label>
+    <div class="formgrid" style="margin-top:8px">
+      <div class="field"><label>Renderer</label><select id="rendererSelect"><option value="pu2pny-modern-v2">PU2PNY Moderno V2</option><option value="mmdvmhost-native">Compatível MMDVMHost nativo</option></select></div>
+      <div class="field"><label>Modelo / tamanho</label><select id="modelSelect">
+        <option value="auto|" selected>Auto detectar</option>
+        <option value="nextion-24-320x240|320x240">Nextion 2,4" · 320×240</option>
+        <option value="nextion-32-400x240|400x240">Nextion 3,2" · 400×240</option>
+        <option value="nextion-35-480x320|480x320">Nextion 3,5" · 480×320</option>
+        <option value="nextion-43-480x272|480x272">Nextion 4,3" · 480×272</option>
+        <option value="nextion-50-800x480|800x480">Nextion 5,0" · 800×480</option>
+        <option value="nextion-70-800x480|800x480">Nextion 7,0" · 800×480</option>
+      </select></div>
+    </div>
+    <div class="formgrid" style="margin-top:8px"><div class="field"><label>Layout da tela (frente / verso)</label><select id="nextionFace"><option value="front">Frente</option><option value="back">Verso</option><option value="dual">Frente e verso</option></select></div></div>
+    <div id="nativeWrap" class="hidden"><label>Layout compatível</label><select id="nativeLayout"><option value="0">ScreenLayout 0</option><option value="2">ON7LDS L2 · ScreenLayout 2</option><option value="3">ON7LDS L3 · ScreenLayout 3</option></select></div>
+  </div>
+
+  <label style="margin-top:14px">Rotação da tela</label>
+  <div class="rotgrid" id="rotation" role="group" aria-label="Rotação"><button type="button" data-r="0" class="active">0°</button><button type="button" data-r="90">90°</button><button type="button" data-r="180">180°</button><button type="button" data-r="270">270°</button></div>
+
+  <label style="margin-top:14px">Brilho <b id="brightnessValue" style="float:right">—</b></label>
+  <div class="rangeval"><input id="brightness" type="range" min="0" max="100" step="5" value="80"></div>
+
+  <label style="margin-top:12px"><input id="mmdvmInfo" type="checkbox" style="width:auto" checked> Mostrar informações do MMDVM em todas as telas</label>
+
+  <button class="btn primary" id="apply" style="margin-top:14px">Aplicar Display</button>
+  <p id="result" class="statusmsg"></p>
+</article></section>
+
+<section class="section"><div class="card"><h2>Detalhes técnicos</h2><details><summary>Ver detecção e runtime</summary><pre id="raw" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto">Carregando...</pre></details></div></section>
+</main></div>
+<script src="ui-common.js"></script><script>
+PNY.nav('display');PNY.initTheme();var detection={};
+PNY.q('brightnessValue').textContent=PNY.q('brightness').value+'%';
+function setFlow(s){document.querySelectorAll('#flow span').forEach(function(x){x.classList.toggle('active',x.dataset.state===s)})}
+function pickDisplay(det){var rows=(det&&det.displays)||[];return rows.find(function(x){return x.detected===true})||rows[0]||{}}
+function syncType(){var t='';document.querySelectorAll('#screenType button').forEach(function(b){if(b.classList.contains('active'))t=b.dataset.t});PNY.q('nextionBlock').classList.toggle('hidden',t!=='nextion')}
+document.querySelectorAll('#screenType button').forEach(function(b){b.onclick=function(){document.querySelectorAll('#screenType button').forEach(function(x){x.classList.toggle('active',x===b)});syncType()}});
+syncType();
+PNY.q('rendererSelect').onchange=function(){PNY.q('nativeWrap').classList.toggle('hidden',PNY.q('rendererSelect').value!=='mmdvmhost-native')};
+document.querySelectorAll('#rotation button').forEach(function(b){b.onclick=function(){document.querySelectorAll('#rotation button').forEach(function(x){x.classList.toggle('active',x===b)});PNY.q('screen').style.transform='rotate('+b.dataset.r+'deg)'}});
+PNY.q('brightness').oninput=function(){PNY.q('brightnessValue').textContent=PNY.q('brightness').value+'%';PNY.q('screen').style.filter='brightness('+(0.4+Number(PNY.q('brightness').value)/100*0.6)+')'};
+function currentRotation(){var r='0';document.querySelectorAll('#rotation button').forEach(function(b){if(b.classList.contains('active'))r=b.dataset.r});return Number(r)}
+function currentType(){var t='oled';document.querySelectorAll('#screenType button').forEach(function(b){if(b.classList.contains('active'))t=b.dataset.t});return t}
+async function load(){
+  try{var d=await PNY.getj('/api/dashboard',null,6000),dr=d.display_runtime||{};
+    var h=await PNY.getj('/api/hardware/status',null,5000).catch(function(){return{}});
+    var o=await PNY.getj('/api/display/override',null,5000).catch(function(){return{}});
+    detection=await PNY.getj('/api/display/detection',null,5000).catch(function(){return{}});
+    var dd=pickDisplay(detection),active=!!(dr.active||d.display_active),state=dr.state||detection.state||'waiting',confirmed=dr.physical_confirmed===true;
+    setFlow(confirmed&&active?'ready':state==='error'?'error':dd.detected?'identified':'detecting');
+    PNY.q('state').textContent=confirmed&&active?'Ativo · comunicação física confirmada':state==='configured'?'Configurado':state==='warning'?'Atenção':state==='not_confirmed'?'Comunicação física não confirmada':'Aguardando';
+    PNY.q('state').className='big '+(confirmed&&active?'green':state==='warning'?'red':'yellow');
+    PNY.q('type').textContent=dr.type||dd.class||o.type||'—';PNY.q('model').textContent=dd.model||((h.display||{}).model)||'—';
+    PNY.q('resolution').textContent=dr.resolution||dd.resolution||o.resolution||'—';PNY.q('integration').textContent=dr.integration||dd.transport||'—';
+    PNY.q('driver').textContent=dr.driver||(active?'PU2PNY Display Core':'—');PNY.q('port').textContent=((h.mmdvm||{}).port)||'—';
+    PNY.q('writer').textContent='writer '+(dr.writer||'—')+(confirmed?' · COMOK':' · sem COMOK');PNY.q('runtimeMessage').textContent=dr.message||'';
+    /* reflect stored override into the controls (type, renderer, rotation, brightness, mmdvm info) */
+    if(o.renderer)PNY.q('rendererSelect').value=o.renderer;PNY.q('enabled').checked=!!o.enabled;
+    var cls=String(dr.type||dd.class||o.type||'').toLowerCase(),t=cls.indexOf('nextion')>=0?'nextion':cls.indexOf('led')>=0&&cls.indexOf('oled')<0?'led':'oled';
+    document.querySelectorAll('#screenType button').forEach(function(b){b.classList.toggle('active',b.dataset.t===t)});syncType();
+    if(o.rotation!=null)document.querySelectorAll('#rotation button').forEach(function(b){b.classList.toggle('active',Number(b.dataset.r)===Number(o.rotation))});
+    PNY.q('screen').style.transform='rotate('+currentRotation()+'deg)';
+    if(o.brightness!=null){PNY.q('brightness').value=o.brightness}PNY.q('brightnessValue').textContent=PNY.q('brightness').value+'%';
+    if(o.mmdvm_info!=null)PNY.q('mmdvmInfo').checked=!!o.mmdvm_info;
+    if(o.nextion_face)PNY.q('nextionFace').value=o.nextion_face;
+    PNY.q('raw').textContent=JSON.stringify({display_runtime:dr,detection:detection,override:o,hardware_display:h.display||{}},null,2);
+    PNY.sweepRealOnly(document);
+  }catch(e){PNY.q('raw').textContent=e.message}
+}
+PNY.q('apply').onclick=async function(){
+  var m=(PNY.q('modelSelect').value||'auto|').split('|');
+  var payload={enabled:currentType()==='nextion'?PNY.q('enabled').checked:false,renderer:PNY.q('rendererSelect').value,layout:Number(PNY.q('nativeLayout').value),model_profile:currentType()==='nextion'?'auto':'',
+    model_profile:m[0],resolution:m[1]||'',
+    /* v2 additions — screen type, Nextion front/back layout, rotation, brightness, MMDVM-on-all-screens */
+    screen_type:currentType(),nextion_face:PNY.q('nextionFace').value,rotation:currentRotation(),brightness:Number(PNY.q('brightness').value),mmdvm_info:PNY.q('mmdvmInfo').checked};
+  var op=PNY.operation('Aplicando Display','Enviando a configuração e aguardando a confirmação física da tela...');
+  try{await PNY.getj('/api/display/override',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),pnySilent:true},20000);
+    op.done('Display atualizado e confirmado.');PNY.q('result').textContent='Display atualizado.';setTimeout(load,700);
+  }catch(e){op.error(e.message);PNY.q('result').textContent=e.message}
+};
+PNY.q('detect').onclick=async function(){var op=PNY.operation('Detectando display','Consultando o hardware sem disputar a porta da MMDVM...');try{await PNY.getj('/api/display/detection',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'detect'}),pnySilent:true},20000).catch(function(){});op.done('Detecção concluída.');setTimeout(load,700)}catch(e){op.error(e.message)}};
+PNY.q('rescan').onclick=async function(){var op=PNY.operation('Redetectando hardware','Varredura de Raspberry Pi, MMDVM e display...');try{await PNY.getj('/api/hardware/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',pnySilent:true},20000).catch(function(){});op.done('Hardware redetectado.');setTimeout(load,700)}catch(e){op.error(e.message)}};
+load();setInterval(function(){if(!document.hidden)load()},15000);
+</script></body></html>

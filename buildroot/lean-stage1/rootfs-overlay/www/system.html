@@ -1,0 +1,81 @@
+<!doctype html><html lang="pt-BR" data-theme="dark" class="pny-i18n-pending"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark light"><title>PU2PNY-V2</title>
+<link rel="icon" type="image/png" href="favicon.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>(function(){document.documentElement.setAttribute('data-theme',localStorage.getItem('pu2pny-theme')||'dark')})();</script>
+<link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="pny-v2.css">
+<style>.clockbig{font-size:32px;font-weight:1000;letter-spacing:1px;font-variant-numeric:tabular-nums}.dangerzone{border-color:color-mix(in srgb,var(--red) 45%,var(--line))}</style>
+</head><body><div class="shell">
+<header class="topnav">
+  <div class="brand"><img class="brandmark" src="favicon.png" alt="PU2PNY"><span class="brandtext"><b style="font-size:19px">PU2PNY-V2</b><small>Sistema</small></span></div>
+  <nav class="nav" id="mainNav"></nav>
+  <div class="navtools"><span class="pill"><span id="clockLocal">--:--:--</span></span><button class="btn" id="themeToggle">☀ Claro</button></div>
+</header>
+<main class="main">
+<div class="top"><div><h1>Sistema</h1><p>Operação do rádio, atualizações e energia.</p></div><span class="badge">Versão <b id="version">—</b></span></div>
+
+<section class="section"><article class="card"><h2>Operacional</h2><div class="big" id="opState">—</div>
+  <p class="muted">Desligar o operacional para MMDVMHost e gateways, mas mantém painel, rede e acesso para manutenção.</p>
+  <div class="actions"><button class="btn danger" id="opOff">Desligar operacional</button><button class="btn good" id="opOn">Ligar operacional</button></div>
+  <p id="opResult" class="statusmsg"></p>
+  <div class="rows" style="margin-top:12px"><div class="row"><span>CPU</span><b id="cpu">—</b></div><div class="row"><span>Temperatura</span><b id="temp">—</b></div><div class="row"><span>RAM</span><b id="ram">—</b></div></div>
+</article></section>
+
+<section class="section"><article class="card"><h2>Atualizações</h2>
+  <div class="big" id="updateState">Verificando...</div>
+  <p class="muted" id="updateText">O sistema verifica o repositório oficial sem instalar silenciosamente.</p>
+  <label><input id="keepBackup" type="checkbox" style="width:auto" checked> Guardar versão atual para rollback</label>
+  <div class="actions" style="margin-top:10px"><button class="btn" id="checkUpdate">Verificar atualizações</button><button class="btn primary hidden" id="installUpdate">Baixar atualização</button><a class="btn hidden" id="releaseLink" target="_blank" rel="noopener">Ver detalhes</a></div>
+  <div class="rows" style="margin-top:12px"><div class="row"><span>Estado do atualizador</span><b id="updaterState">—</b></div><div class="row"><span>Download</span><b id="downloadState">—</b></div><div class="row" data-real-only><span>Ponto de retorno</span><b id="backupState">—</b></div></div>
+  <div class="notice" style="margin-top:12px"><b>Instalação segura:</b> o download ocorre em segundo plano e nada é instalado antes de 100% e da validação SHA‑256. Use alimentação estável; em falha após o início, o sistema tenta restaurar o ponto de retorno automaticamente.</div>
+</article></section>
+
+<section class="section"><article class="card dangerzone"><h2>Energia</h2>
+  <p class="muted">Reiniciar e desligar exigem confirmação. Aguarde o LED apagar antes de cortar a alimentação.</p>
+  <div class="notice warn" style="margin-bottom:12px"><b>Desligamento completo:</b> o botão abaixo encerra totalmente o hotspot (halt/poweroff). O aparelho fica desligado de verdade e só volta a ligar quando você religar a energia na mão — não há como ligar de novo pelo painel depois de desligado.</div>
+  <div class="actions"><button class="btn" id="reboot">Reiniciar hotspot</button><button class="btn danger" id="poweroff">Desligar completamente o hotspot</button></div>
+  <p id="powerResult" class="statusmsg"></p>
+</article></section>
+</main></div>
+<script src="ui-common.js"></script><script>
+PNY.nav('system');PNY.initTheme();var info={};
+async function action(a,extra,timeout){return PNY.getj('/api/system',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({action:a},extra||{})),pnySilent:true},timeout||12000)}
+async function load(){
+  try{info=await PNY.getj('/api/system');
+    PNY.q('opState').textContent=info.operational?'Ligado':'Desligado';PNY.q('opState').className='big '+(info.operational?'green':'yellow');
+    PNY.q('opOff').disabled=!info.operational;PNY.q('opOn').disabled=!!info.operational;
+  }catch(e){}
+  try{var d=await PNY.getj('/api/dashboard'),t=d.telemetry||{},temp=Number(t.temperature);PNY.q('version').textContent=d.version||'—';
+    PNY.q('cpu').textContent=t.cpu_percent==null?'—':t.cpu_percent+'%';PNY.q('temp').textContent=temp>=0?temp+' °C':'—';
+    PNY.q('ram').textContent=t.memory_used_mb==null?'—':(t.memory_used_mb+' / '+t.memory_total_mb+' MB');
+  }catch(e){}
+  PNY.sweepRealOnly(document);
+}
+PNY.q('opOff').onclick=async function(){if(!confirm('Desligar MMDVMHost e gateways? O painel continuará acessível.'))return;var op=PNY.operation('Desligando operacional','Parando gateway e MMDVMHost com confirmação...');try{var r=await action('operational-off',null,30000);op.done(r.message||'Operacional desligado.');await load()}catch(e){op.error(e.message)}};
+PNY.q('opOn').onclick=async function(){var op=PNY.operation('Ligando operacional','Restaurando o último perfil salvo e confirmando serviços...');try{var r=await action('operational-on',null,75000);op.done(r.message||'Operacional ligado.');await load()}catch(e){op.error(e.message)}};
+PNY.q('reboot').onclick=async function(){if(!confirm('Reiniciar o hotspot agora?'))return;var op=PNY.operation('Reiniciando hotspot','O hotspot vai reiniciar. O painel ficará indisponível por alguns instantes.');try{await action('reboot',null,5000)}catch(e){}op.step('Reiniciando...')};
+PNY.q('poweroff').onclick=async function(){if(!confirm('Desligar completamente o hotspot agora? O aparelho vai parar por completo e só liga de novo quando você religar a energia na mão — não dá para ligar pelo painel depois.'))return;var op=PNY.operation('Desligando completamente','Encerrando todos os serviços e desligando o aparelho. Aguarde o LED apagar antes de cortar a energia. Para ligar de novo, religue a alimentação na mão.');try{await action('poweroff',null,5000)}catch(e){}op.step('Desligando o hotspot por completo...')};
+async function update(){PNY.q('updateState').textContent='Verificando...';try{var d=await PNY.getj('/api/update'),rels=d.releases||[],latest=rels[0]||{},up=d.updater||{},staged=up.staged||null;window.pnyLatest=latest;window.pnyUp=up;
+  PNY.q('updateState').textContent=d.available?'Atualização disponível':'Atualizado';PNY.q('updateState').className='big '+(d.available?'yellow':'green');
+  PNY.q('updateText').textContent=d.available?('Instalada '+d.current+' · disponível '+d.latest+'. '+(latest.notes||'')):('Versão '+d.current+' sem atualização mais nova publicada.');
+  var can=d.available&&latest.installable,isStaged=!!(staged&&staged.verified&&staged.version===latest.version);
+  PNY.q('installUpdate').classList.toggle('hidden',!can);if(can)PNY.q('installUpdate').textContent=isStaged?'Instalar agora':'Baixar atualização';
+  if(latest.url){PNY.q('releaseLink').href=latest.url;PNY.q('releaseLink').classList.remove('hidden')}
+  PNY.q('updaterState').textContent=up.message||up.state||'Pronto';var pct=up.progress_percent;
+  PNY.q('downloadState').textContent=up.state==='downloaded'?'100% · SHA-256 validado':(pct!=null?Math.round(Number(pct))+'%':(staged&&staged.verified?'100% · verificado':'Aguardando'));
+  var backups=up.backups||[];PNY.q('backupState').textContent=backups.length?backups[0]:'—';PNY.sweepRealOnly(document);
+}catch(e){PNY.q('updateState').textContent='Indisponível';PNY.q('updateText').textContent=e.message}}
+async function updateAction(body,op,doneStates){doneStates=doneStates||['done'];try{await PNY.getj('/api/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),pnySilent:true},7000);
+  for(var i=0;i<360;i++){await new Promise(function(r){setTimeout(r,1000)});var d=await PNY.getj('/api/update',null,7000).catch(function(){return null});if(!d)continue;var up=d.updater||{},st=up.state,msg=up.message||st,pct=up.progress_percent;
+    if(pct!=null&&op.progress)op.progress(pct,msg||'Baixando atualização...');else op.step(msg||'Executando atualização...');
+    if(doneStates.indexOf(st)>=0){op.done(msg||'Concluído.',1800);update();return}
+    if(st==='rolled_back'){op.error(msg||'A instalação falhou e o estado anterior foi restaurado automaticamente.');update();return}
+    if(st==='error')throw new Error(msg||'Falha na atualização')}
+  throw new Error('A operação ultrapassou o limite seguro; confira o estado antes de tentar novamente.')}catch(e){op.error(e.message)}}
+PNY.q('checkUpdate').onclick=async function(){var op=PNY.operation('Verificando atualizações','Consultando releases oficiais do PU2PNY-V2...');await update();op.done('Verificação concluída.')};
+PNY.q('installUpdate').onclick=function(){var r=window.pnyLatest||{},up=window.pnyUp||{},staged=up.staged||null;if(!r.installable)return;
+  if(!(staged&&staged.verified&&staged.version===r.version)){var op=PNY.operation('Baixando '+r.version,'Download em segundo plano. Nada será instalado antes de 100% + SHA‑256 válido.');updateAction({action:'download',url:r.bundle_url,sha256:r.bundle_sha256,version:r.version},op,['downloaded']);return}
+  if(!confirm('O download de '+r.version+' está completo e validado por SHA‑256. Mantenha alimentação estável durante a instalação. Prosseguir?'))return;
+  var op2=PNY.operation('Instalando '+r.version,'Pacote local verificado. Criando ponto de retorno e aplicando componentes...');updateAction({action:'install-staged',sha256:r.bundle_sha256,version:r.version,keep_backup:PNY.q('keepBackup').checked},op2,['done'])};
+load();update();setInterval(function(){if(!document.hidden)load()},15000);
+</script></body></html>

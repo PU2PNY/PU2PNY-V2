@@ -1,0 +1,195 @@
+<!doctype html><html lang="pt-BR" data-theme="dark" class="pny-i18n-pending"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark light"><title>PU2PNY-V2</title>
+<link rel="icon" type="image/png" href="favicon.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>(function(){document.documentElement.setAttribute('data-theme',localStorage.getItem('pu2pny-theme')||'dark')})();</script>
+<link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="pny-v2.css">
+<style>
+.livebox{position:relative;overflow:hidden;border-width:2px;min-height:300px;transition:border-color .2s}
+.livebox.waiting{border-color:color-mix(in srgb,var(--green) 55%,var(--line))}
+.livebox.active{border-color:var(--red);box-shadow:0 0 24px color-mix(in srgb,var(--red) 22%,transparent)}
+.statusbar{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:14px}
+.statusleft{display:flex;align-items:center;gap:9px;font-weight:950}.txlamp{width:12px;height:12px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}.active .txlamp{background:var(--red);box-shadow:0 0 12px var(--red)}
+.statusright{font-size:13px;color:var(--muted)}.statusright b{font-size:21px;color:var(--text);font-variant-numeric:tabular-nums}
+.hero{display:grid;grid-template-columns:112px minmax(0,1fr);gap:18px;align-items:center}
+.portrait{width:102px;height:102px;border:2px solid var(--blue);border-radius:50%;overflow:hidden;background:var(--card2);display:grid;place-items:center}.portrait img{width:100%;height:100%;object-fit:cover}
+.who .call{font-size:28px;font-weight:1000;color:var(--blue);line-height:1}.who .name{font-weight:900;margin-top:5px}.who .place{font-size:12px;color:var(--muted);margin-top:5px}.flag{width:21px;height:15px;object-fit:cover;vertical-align:middle;margin-right:5px;border-radius:2px}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(72px,1fr));gap:8px;margin-top:14px}.fact{padding:7px 9px;border-left:1px solid var(--line);min-width:0}.fact small{display:block;color:var(--muted);font-size:9px;text-transform:uppercase}.fact b{display:block;margin-top:3px;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}.metric{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px}.metric small{display:block;color:var(--muted);font-size:9px;text-transform:uppercase}.metric b{display:block;font-size:15px;margin-top:3px}
+.netrow{display:grid;grid-template-columns:auto 1fr repeat(3,auto);gap:12px;align-items:center;border-top:1px solid var(--line);margin-top:14px;padding-top:12px;font-size:12px}
+.protocolfilters{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}.protocolfilters .btn.active{border-color:var(--blue);color:var(--blue)}
+.activitytable{width:100%;border-collapse:collapse;font-size:12px}.activitytable th,.activitytable td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}.activitytable th{font-size:9px;text-transform:uppercase;color:var(--muted)}
+.statechip{display:inline-block;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:900}.statechip.tx{background:color-mix(in srgb,var(--red) 15%,transparent);color:var(--red)}.statechip.rx{background:color-mix(in srgb,var(--green) 15%,transparent);color:var(--green)}
+.callcol{font-weight:900;color:var(--blue)}.activityflag{width:20px;height:14px;object-fit:cover;vertical-align:middle;margin-left:5px;border-radius:2px}
+.pny-health{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}.pny-healthitem{padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card2);min-width:0}.pny-healthitem .big{font-size:19px}.pny-meter{height:7px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:7px}.pny-meter i{display:block;height:100%;background:var(--blue);width:0;transition:width .25s ease}
+@media(max-width:900px){.facts,.metrics{grid-template-columns:repeat(2,1fr)}.pny-health{grid-template-columns:1fr}}
+@media(max-width:620px){.hero{grid-template-columns:72px 1fr}.portrait{width:66px;height:66px}.who .call{font-size:23px}.netrow span:nth-last-child(-n+3){display:none}.statusright{display:none}}
+</style></head><body><div class="shell">
+<header class="topnav">
+  <div class="brand"><img class="brandmark" src="favicon.png" alt="PU2PNY"><span class="brandtext"><b style="font-size:19px">PU2PNY-V2</b><small>Hotspot de Rádio Amador</small></span></div>
+  <nav class="nav" id="mainNav"></nav>
+  <div class="navtools"><span class="pill"><span id="clockLocal">--:--:--</span></span><button class="btn" id="themeToggle">☀ Claro</button></div>
+</header>
+<main class="main">
+<div class="top"><div><h1>Ao Vivo</h1><p>Hotspot em tempo real · RF, gateway e Internet.</p></div>
+  <div class="actions"><span class="badge"><i class="dot" id="radioDot"></i><span id="radioText">Rádio</span></span><span class="badge"><i class="dot" id="netDot"></i><span id="netText">Internet</span></span></div></div>
+
+<section class="section">
+<div class="connbanner" id="connBanner" role="status" hidden><i class="cdot"></i><span id="connText">—</span></div>
+<article class="card livebox waiting" id="liveBox">
+  <div class="statusbar"><div class="statusleft"><span class="txlamp"></span><span id="stateTitle">AGUARDANDO</span><span class="muted" id="stateSub">Sem transmissão</span></div><div class="statusright"><span id="durationLabel">Tempo</span>: <b id="duration">00h 00m 00s</b></div></div>
+  <div class="hero">
+    <div class="portrait" id="portrait"><div class="radar"><span class="radarcore"></span></div></div>
+    <div style="min-width:0">
+      <div class="who"><div class="call" id="callsign">PU2PNY</div><div class="name" id="personName">Hotspot</div><div class="place"><img id="flag" class="flag hidden" alt="" onerror="this.classList.add('hidden')"><span id="location">Aguardando atividade</span></div></div>
+      <div class="dirlines">
+        <div class="dirline rx idle" id="rxLine"><span class="tag">Recepção (RX)</span><span class="val" id="rxVal">Sem atividade</span><span class="sub" id="rxSub"></span></div>
+        <div class="dirline tx idle" id="txLine"><span class="tag">Transmissão (TX)</span><span class="val" id="txVal">Sem atividade</span><span class="sub" id="txSub"></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="facts">
+    <div class="fact"><small>Protocolo</small><b id="protocol">—</b></div>
+    <div class="fact"><small id="idLabel">DMR ID</small><b id="radioId">—</b></div>
+    <div class="fact"><small id="targetLabel">Destino</small><b id="target">—</b></div>
+    <div class="fact"><small>Conexão</small><b id="connection">—</b></div>
+  </div>
+  <div class="metrics">
+    <div class="metric" data-real-only id="berMetric"><small>BER</small><b id="ber">—</b></div>
+    <div class="metric" data-real-only id="rssiMetric"><small>RSSI</small><b id="rssi">—</b></div>
+    <div class="metric" data-real-only id="slotMetric"><small>Slot</small><b id="slot">—</b></div>
+    <div class="metric" data-real-only id="ccMetric"><small>Color Code</small><b id="colorCode">—</b></div>
+    <div class="metric"><small id="serverLabel">Servidor / destino</small><b id="server">—</b></div>
+    <div class="metric" id="simplexFrequencyMetric"><small>Frequência</small><b id="frequency">—</b></div>
+    <div class="metric hidden" id="rxFrequencyMetric"><small>RX</small><b id="rxFrequency">—</b></div>
+    <div class="metric hidden" id="txFrequencyMetric"><small>TX</small><b id="txFrequency">—</b></div>
+    <div class="metric"><small>CPU / Temp.</small><b id="cpuTemp">—</b></div>
+  </div>
+  <div class="netrow"><span>Internet</span><div class="meter"><i id="netMeter" style="width:100%"></i></div><span>Latência <b id="lat">—</b></span><span>Perda <b id="per">—</b></span><span>Jitter <b id="jit">—</b></span></div>
+
+  <div class="pny-health">
+    <div class="pny-healthitem hidden" data-real-keep id="rfHealth"><small class="muted">Sinal RF</small><div class="big" id="rfValue">—</div><div class="pny-meter"><i id="rfBar"></i></div><small id="rfMeta" class="muted">Aguardando RX do rádio</small></div>
+    <div class="pny-healthitem"><small class="muted">Wi-Fi / Uplink</small><div class="big" id="wifiValue">—</div><div class="pny-meter"><i id="wifiBar"></i></div><small id="wifiMeta" class="muted">—</small></div>
+    <div class="pny-healthitem"><small class="muted">Qualidade da Internet</small><div class="big" id="netValue">—</div><div class="pny-meter"><i id="netBar"></i></div><small id="netMeta" class="muted">—</small></div>
+  </div>
+</article></section>
+
+<section class="section">
+  <div class="sectionhead"><h2>Atividade recente</h2><span class="mini muted" id="activityCount">Aguardando transmissões</span></div>
+  <div class="protocolfilters" id="filters">
+    <button class="btn active" data-p="">Todos</button><button class="btn" data-p="DMR">DMR</button><button class="btn" data-p="DSTAR">D-Star</button><button class="btn" data-p="YSF">YSF</button><button class="btn" data-p="P25">P25</button><button class="btn" data-p="NXDN">NXDN</button>
+  </div>
+  <div class="card" id="activityGroups"><div class="muted">Aguardando atividade...</div></div>
+</section>
+</main></div>
+<script src="ui-common.js"></script><script>
+PNY.nav('live');PNY.initTheme();
+var dash={},live={},contacts=[],es=null,poll=null,started=0,filterProto='',activeIdentity='';
+function protoName(p){p=String(p||'').toUpperCase();return p==='DSTAR'?'D-Star':p==='YSF'?'YSF/C4FM':p||'—'}
+function freq(){var c=dash.config||{},rx=Number(c.rx_hz||0),tx=Number(c.tx_hz||0);if(!rx)return'—';var a=(rx/1e6).toFixed(6),b=tx?(tx/1e6).toFixed(6):a;return c.use_mode==='repeater'?('RX '+a+' · TX '+b+' MHz'):a+' MHz'}
+function gatewayActive(p){p=String(p||((dash.config||{}).protocol)||'').toUpperCase();return p==='DMR'?!!dash.dmrgateway_active:p==='DSTAR'?!!dash.dstargateway_active:p==='YSF'?!!dash.ysfgateway_active:p==='P25'?!!dash.p25gateway_active:p==='NXDN'?!!dash.nxdngateway_active:p==='POCSAG'?!!dash.dapnetgateway_active:false}
+function remoteConnected(){var nr=dash.network_runtime||{};return nr.connected===true||nr.linked===true||String(nr.link_state||'').toLowerCase()==='linked'}
+function currentActive(){var a=live.active||null;if(!a)return null;var u=Date.parse(live.updated||'');if(Number.isFinite(u)&&Date.now()-u>22000)return null;return a}
+function ownOperator(){var c=dash.config||{},call=String(c.callsign||'').toUpperCase(),id=String(c.dmr_id||'');return contacts.find(function(x){return String(x.callsign||'').toUpperCase()===call||String(x.id||'')===id})||{callsign:call,name:call,city:'',state:'',country:'',country_code:'',photo:''}}
+function operator(e){var o=e&&e.operator||{},src=String(e&&e.source||'').trim(),fb=/^\d+$/.test(src)?'':src;return {callsign:o.callsign||fb||'—',name:o.name||o.callsign||fb||'—',id:o.id||(/^\d+$/.test(src)?src:''),city:o.city||'',state:o.state||'',country:o.country||'',cc:o.country_code||'',photo:o.photo||''}}
+function setIdentity(o){PNY.q('callsign').textContent=o.callsign||'—';PNY.q('personName').textContent=o.name||o.callsign||'—';PNY.q('location').textContent=[o.city,o.state,o.country].filter(Boolean).join(' · ')||'Localização não informada';var box=PNY.q('portrait');if(o.photo){box.innerHTML='';var im=document.createElement('img');im.src=o.photo;im.alt='';im.onerror=function(){box.innerHTML='<div class="radar"><span class="radarcore"></span></div>'};box.appendChild(im)}else box.innerHTML='<div class="radar"><span class="radarcore"></span></div>';var f=PNY.q('flag'),u=PNY.flagUrl(o.cc);if(u){f.src=u;f.classList.remove('hidden')}else f.classList.add('hidden')}
+function durationText(sec){sec=Math.max(0,Math.floor(Number(sec)||0));var h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return String(h).padStart(2,'0')+'h '+String(m).padStart(2,'0')+'m '+String(s).padStart(2,'0')+'s'}
+function targetFor(a,p){if(!a)return'—';if(a.target)return a.target;if(p==='DSTAR')return [a.reflector,a.module].filter(Boolean).join(' ')||'—';if(p==='YSF'&&a.dgid!=null)return'DG-ID '+a.dgid;return'—'}
+function rfPct(rssi){var n=Number(rssi);return Number.isFinite(n)?Math.max(0,Math.min(100,(n+125)*2)):0}
+function setDirLine(which,a){ /* each RF direction on its OWN line */
+  var line=PNY.q(which+'Line'),val=PNY.q(which+'Val'),sub=PNY.q(which+'Sub');
+  if(!a){line.classList.add('idle');val.textContent='Sem atividade';sub.textContent='';return}
+  line.classList.remove('idle');var o=operator(a),p=String(a.protocol||'').toUpperCase();
+  val.textContent=(o.callsign||'—')+' · '+protoName(p);
+  var rf=String(a.direction||'').toUpperCase()==='RF',rv=rf?(a.rssi_avg!=null?a.rssi_avg:a.rssi):null;
+  sub.textContent=rf?((a.ber!=null?'BER '+Number(a.ber).toFixed(1)+'% · ':'')+(rv!=null?Math.round(Number(rv))+' dBm':'')):'via Internet';
+}
+function netRender(){var n=live.internet||{},d=dash.netdiag||{},m=d.metrics||{},c=dash.connectivity||{};
+  var lat=n.latency_ms!=null?n.latency_ms:(m.latency_ms!=null?m.latency_ms:c.internet_latency_ms),loss=n.loss_percent!=null?n.loss_percent:m.loss_pct,jit=n.jitter_ms!=null?n.jitter_ms:m.jitter_ms;
+  var q=n.quality&&n.quality!=='unknown'?n.quality:(d.health==='ok'?'good':d.health==='warning'?'poor':(c.internet?'good':'offline')),good=q==='excellent'||q==='good'||q==='ok';
+  PNY.q('lat').textContent=lat==null?'—':Number(lat).toFixed(0)+' ms';PNY.q('per').textContent=loss==null?'—':Number(loss).toFixed(1)+'%';PNY.q('jit').textContent=jit==null?'—':Number(jit).toFixed(0)+' ms';
+  PNY.q('netMeter').style.width=(q==='offline'?0:good?100:35)+'%';PNY.q('netMeter').style.background=good?'var(--green)':q==='offline'?'var(--red)':'var(--yellow)';
+  PNY.q('netDot').className='dot '+(good?'good':q==='offline'?'bad':'warn');PNY.q('netText').textContent=good?'Internet OK':q==='offline'?'Internet offline':'Internet atenção';
+}
+function healthRender(){var c=dash.connectivity||{};
+  if(c.default_interface&&/^e(n|th)/.test(c.default_interface)){PNY.q('wifiValue').textContent='Ethernet';PNY.q('wifiMeta').textContent='Link ativo';PNY.q('wifiBar').style.width='100%'}
+  else{PNY.q('wifiValue').textContent=c.wifi_quality||'—';PNY.q('wifiMeta').textContent=(c.wifi_ssid||'Wi-Fi')+(c.wifi_signal?(' · '+c.wifi_signal+'%'):'');PNY.q('wifiBar').style.width=(c.wifi_signal||0)+'%'}
+  PNY.q('netValue').textContent=c.internet?(c.internet_quality||'—'):'Offline';PNY.q('netMeta').textContent=c.internet_latency_ms?c.internet_latency_ms+' ms':'sem resposta';PNY.q('netBar').style.width=c.internet?Math.max(12,100-Math.min(90,(c.internet_latency_ms||0)/3))+'%':'0%';
+}
+function connBanner(p,active){var el=PNY.q('connBanner'),t=PNY.q('connText');
+  if(active||!p){el.hidden=true;return}el.hidden=false;
+  if(remoteConnected()){el.className='connbanner ok';t.textContent='Conectado ao servidor'}
+  else if(gatewayActive(p)){el.className='connbanner';t.innerHTML='Gateway ativo, aguardando link do servidor.'}
+  else{el.className='connbanner down';t.textContent='Desconectado do servidor'}
+}
+function render(){
+  var a=currentActive(),c=dash.config||{},t=dash.telemetry||{},nr=dash.network_runtime||{},box=PNY.q('liveBox'),p=String((a&&a.protocol)||c.protocol||'').toUpperCase();
+  PNY.q('radioDot').className='dot '+(dash.radio_active?'good':'bad');PNY.q('radioText').textContent=dash.radio_active?'Rádio ativo':'Rádio parado';
+  PNY.q('protocol').textContent=protoName(p);
+  var server=nr.server_name||c.server_name||'—',dmrTG=Number(nr.connected_tg||nr.requested_tg||nr.module_tg||0),mod=p==='DSTAR'?(nr.module||''):'';
+  PNY.q('serverLabel').textContent=p==='DSTAR'?'Servidor / refletor':p==='YSF'?'Servidor / sala/refletor':'Servidor / destino';
+  PNY.q('server').textContent=p==='DMR'?(server+(dmrTG?(' · TG '+dmrTG):'')):(server+(mod?' · módulo '+mod:''));
+  var duplex=c.use_mode==='repeater',rxhz=Number(c.rx_hz||0),txhz=Number(c.tx_hz||0);
+  PNY.q('simplexFrequencyMetric').classList.toggle('hidden',duplex);PNY.q('rxFrequencyMetric').classList.toggle('hidden',!duplex);PNY.q('txFrequencyMetric').classList.toggle('hidden',!duplex);
+  PNY.q('frequency').textContent=duplex?'—':freq();PNY.q('rxFrequency').textContent=duplex&&rxhz?(rxhz/1e6).toFixed(6)+' MHz':'—';PNY.q('txFrequency').textContent=duplex&&txhz?(txhz/1e6).toFixed(6)+' MHz':'—';
+  PNY.q('cpuTemp').textContent=(t.cpu_percent==null?'—':t.cpu_percent+'%')+' / '+(Number(t.temperature)>=0?t.temperature+' °C':'—');
+  PNY.q('connection').textContent=gatewayActive(p)?'Gateway ativo':'Aguardando';
+  PNY.q('idLabel').textContent=p==='DMR'?'DMR ID':'ID / Origem';
+  PNY.q('targetLabel').textContent=p==='DSTAR'?'Refletor / Destino':p==='YSF'?'DG-ID / Destino':'Destino';
+  var showDMR=p==='DMR'&&!!a;
+  PNY.q('slot').textContent=showDMR?((a&&a.slot)||c.dmr_slot||'—'):'—';PNY.q('colorCode').textContent=showDMR?(c.color_code==null?'—':c.color_code):'—';
+  box.classList.remove('waiting','active');
+  if(a){
+    box.classList.add('active');var tx=a.mode==='tx',o=operator(a),origin=String(a.direction||'').toUpperCase();setIdentity(o);
+    PNY.q('stateTitle').textContent=tx?'TX ATIVO':'RX ATIVO';PNY.q('stateSub').textContent=origin==='RF'?'Sinal recebido pelo rádio':'Recebendo pela Internet';
+    PNY.q('radioId').textContent=o.id||((p==='DMR'&&/^\d+$/.test(String(a.source||'')))?a.source:(c.dmr_id||'—'));
+    PNY.q('target').textContent=targetFor(a,p);
+    /* TX and RX each on their own line */
+    setDirLine(tx?'tx':'rx',a);setDirLine(tx?'rx':'tx',null);
+    var rf=origin==='RF',rv=rf?(a.rssi_avg!=null?a.rssi_avg:a.rssi):null;
+    PNY.q('ber').textContent=rf&&a.ber!=null?Number(a.ber).toFixed(1)+'%':'—';
+    PNY.q('rssi').textContent=rf&&rv!=null?Number(rv).toFixed(0)+' dBm':'—';
+    if(rf&&rv!=null){PNY.q('rfHealth').classList.remove('hidden');PNY.q('rfValue').textContent=Math.round(Number(rv))+' dBm';PNY.q('rfBar').style.width=rfPct(rv)+'%';PNY.q('rfMeta').textContent=(a.ber!=null?'BER '+Number(a.ber).toFixed(1)+'% · ':'')+protoName(p)}
+    else{PNY.q('rfHealth').classList.add('hidden');PNY.q('rfValue').textContent='—';PNY.q('rfBar').style.width='0%';PNY.q('rfMeta').textContent='Aguardando RX do rádio'}
+    var bs=Number(a.started_unix_ms||0);started=bs>0?bs:(started||Date.now());
+  }else{
+    box.classList.add('waiting');var o=ownOperator();setIdentity(o);
+    PNY.q('stateTitle').textContent='AGUARDANDO';PNY.q('stateSub').textContent='Monitorando RF e Internet';
+    PNY.q('callsign').textContent=c.callsign||o.callsign||'PU2PNY';PNY.q('personName').textContent='Rastreando sinais';PNY.q('location').textContent='Pronto para receber ou transmitir';
+    PNY.q('radioId').textContent=c.dmr_id||o.id||'—';PNY.q('target').textContent=server+(p==='DMR'&&dmrTG?(' · TG '+dmrTG):'');
+    setDirLine('rx',null);setDirLine('tx',null);
+    PNY.q('rfHealth').classList.add('hidden');PNY.q('ber').textContent='—';PNY.q('rssi').textContent='—';PNY.q('rfValue').textContent='—';PNY.q('rfBar').style.width='0%';PNY.q('rfMeta').textContent='Aguardando RX do rádio';
+    started=0;PNY.q('durationLabel').textContent='Tempo';PNY.q('duration').textContent='00h 00m 00s';
+  }
+  connBanner(p,!!a);netRender();healthRender();renderActivity();PNY.sweepRealOnly(document);
+}
+function renderActivity(){
+  var rows=Array.isArray(live.history)?live.history.slice():[],proto=filterProto,groups={},order=[],c=dash.config||{},nr=dash.network_runtime||{};
+  if(proto)rows=rows.filter(function(e){return String(e.protocol||'').toUpperCase()===proto});
+  rows.forEach(function(e){var o=operator(e),key=String(o.callsign||e.source||'').trim();if(!key||key==='—')key='ID '+String(e.source||'desconhecido');if(!groups[key]){groups[key]={op:o,items:[],last:e};order.push(key)}groups[key].items.push(e)});
+  order=order.slice(0,30);
+  PNY.q('activityCount').textContent=order.length?('Mostrando '+order.length+' indicativo(s)'):'Aguardando transmissões';
+  var host=PNY.q('activityGroups');
+  if(!order.length){host.innerHTML='<div class="muted">Nenhuma atividade registrada para este filtro.</div>';return}
+  var stationType=c.use_mode==='repeater'?'Repetidora':'Hotspot';
+  var body=order.map(function(key,idx){var g=groups[key],last=g.items[0],o=g.op,origin=String(last.direction||'').toUpperCase(),tx=origin==='RF',stamp=last.ended_at||last.started_at||'';
+    var p=String(last.protocol||'').toUpperCase(),target=targetFor(last,p),ctg=Number(last.connected_tg||0)||Number(nr.connected_tg||nr.requested_tg||0),module=p==='DMR'?'':(last.module||'');
+    var modtg=p==='DMR'?(ctg?('TG '+ctg+(target&&target!=='—'?' · '+target:'')):target):(module?(module+(target&&target!=='—'?' · '+target:'')):target);
+    var flag=PNY.flagUrl(o.cc),place=[o.city,o.state].filter(Boolean).join(' / ')||'—';
+    return '<tr><td>'+(idx+1)+(flag?'<img class="activityflag" src="'+PNY.esc(flag)+'" alt="" onerror="this.remove()">':'')+'</td><td><span class="statechip '+(tx?'tx':'rx')+'">'+(tx?'TX':'RX')+'</span></td><td class="callcol">'+PNY.esc(o.callsign||key)+'</td><td>'+PNY.esc(o.name||'—')+'</td><td>'+stationType+'</td><td>'+PNY.esc(place)+'</td><td>'+PNY.esc(o.country||'—')+'</td><td>'+PNY.esc(protoName(last.protocol))+'</td><td>'+PNY.esc(modtg||'—')+'</td><td>'+PNY.esc(last.duration==null?'—':Number(last.duration).toFixed(1)+' s')+'</td><td>'+PNY.esc(PNY.fmtTime(stamp))+'</td></tr>';
+  }).join('');
+  host.innerHTML='<div class="tablewrap"><table class="activitytable"><thead><tr><th># / País</th><th>Status</th><th>Indicativo</th><th>Nome</th><th>Estação</th><th>Cidade</th><th>País</th><th>Protocolo</th><th>Módulo / TG</th><th>Tempo</th><th>Horário</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+}
+function tick(){if(!started){PNY.q('duration').textContent='00h 00m 00s';return}
+  var sec=(Date.now()-started)/1000,a=currentActive(),isRF=a&&String(a.direction||'').toUpperCase()==='RF',isTx=a&&a.mode==='tx';
+  if(isRF&&isTx){PNY.q('durationLabel').textContent='TOT restante';PNY.q('duration').textContent=Math.max(0,180-Math.floor(sec))+' s'}else{PNY.q('durationLabel').textContent='Tempo';PNY.q('duration').textContent=durationText(sec)}}
+async function refreshDash(){try{dash=await PNY.getj('/api/dashboard');render()}catch(e){}}
+async function refreshContacts(){try{var j=await PNY.getj('/api/contacts');contacts=Array.isArray(j.contacts)?j.contacts:[];render()}catch(e){}}
+function setLive(v){live=v||{};render()}
+async function fallback(){if(poll)return;var go=async function(){if(!document.hidden)try{setLive(await PNY.getj('/api/live'))}catch(e){}};go();poll=setInterval(go,1500)}
+function stream(){if(es||document.hidden)return;if(window.EventSource){try{es=new EventSource('/api/live/events');es.addEventListener('live',function(e){try{setLive(JSON.parse(e.data))}catch(_){}});es.onerror=function(){try{es.close()}catch(_){}es=null;fallback()};return}catch(e){}}fallback()}
+document.querySelectorAll('#filters [data-p]').forEach(function(b){b.onclick=function(){filterProto=String(b.dataset.p||'').toUpperCase();document.querySelectorAll('#filters .btn').forEach(function(x){x.classList.toggle('active',x===b)});renderActivity()}});
+refreshDash();refreshContacts();PNY.getj('/api/live').then(setLive).catch(function(){});
+setInterval(refreshDash,8000);setInterval(refreshContacts,30000);setInterval(tick,250);stream();
+document.addEventListener('visibilitychange',function(){if(document.hidden){if(es){es.close();es=null}if(poll){clearInterval(poll);poll=null}}else{refreshDash();refreshContacts();stream()}});
+</script></body></html>

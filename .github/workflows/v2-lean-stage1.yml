@@ -1,0 +1,146 @@
+name: PU2PNY-V2 lean Stage 1 (Buildroot AP, Pi 4 / ARM32)
+on:
+  push:
+    branches: [build/v2-lean-stage1]
+    paths:
+      - '.github/workflows/v2-lean-stage1.yml'
+      - 'buildroot/lean-stage1/**'
+  workflow_dispatch:
+env:
+  SOURCE_COMMIT: ${{ github.sha }}
+  BR_VERSION: '2024.02.9'
+permissions:
+  contents: read
+concurrency:
+  group: pu2pny-v2-lean-stage1
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space for Buildroot
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/lib/android /opt/hostedtoolcache || true
+          df -h /
+      - name: Install host build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential cpio rsync file bc unzip wget python3 bison flex libssl-dev git xz-utils
+      - name: Fetch Buildroot ${{ env.BR_VERSION }}
+        run: git clone --depth 1 --branch "$BR_VERSION" https://github.com/buildroot/buildroot br
+      - name: Configure (raspberrypi4_defconfig + Stage-1 fragment + overlay)
+        run: |
+          set -euo pipefail
+          cd br
+          make raspberrypi4_defconfig
+          cat "$GITHUB_WORKSPACE/buildroot/lean-stage1/stage1.fragment" >> .config
+          printf 'BR2_ROOTFS_OVERLAY="%s"\n' "$GITHUB_WORKSPACE/buildroot/lean-stage1/rootfs-overlay" >> .config
+          printf 'BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="%s"\n' "$GITHUB_WORKSPACE/buildroot/lean-stage1/busybox.fragment" >> .config
+          make olddefconfig
+          echo "----- selected AP/overlay config -----"
+          grep -E 'BR2_PACKAGE_HOSTAPD=|BR2_PACKAGE_DNSMASQ=|BR2_PACKAGE_IW=|BR2_PACKAGE_IPROUTE2=|BR2_PACKAGE_WIRELESS_REGDB=|BR2_ROOTFS_OVERLAY=|BR2_TARGET_GENERIC_HOSTNAME=|BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES=' .config
+      - name: Build (toolchain + kernel + rootfs + image)
+        run: |
+          set -euo pipefail
+          cd br
+          make -j"$(nproc)"
+      - name: Verify AP components are present in the rootfs (no-AP gate)
+        run: |
+          set -euo pipefail
+          cd br
+          T=output/target
+          fail=0
+          check(){ if eval "$1"; then echo "PASS: $2"; else echo "FAIL: $2"; fail=1; fi; }
+          check 'test -f "$T/usr/sbin/hostapd"' 'hostapd binary'
+          check 'test -e "$T/usr/sbin/dnsmasq" -o -e "$T/usr/bin/dnsmasq"' 'dnsmasq binary'
+          check 'test -s "$T/lib/firmware/brcm/brcmfmac43455-sdio.bin"' 'Pi4 43455 firmware .bin'
+          check 'test -s "$T/lib/firmware/brcm/brcmfmac43455-sdio.clm_blob"' 'Pi4 43455 clm_blob'
+          check 'ls "$T/lib/firmware/brcm/brcmfmac43455-sdio.raspberrypi,4-model-b.txt"' 'Pi4 43455 board txt'
+          check 'test -s "$T/lib/firmware/brcm/brcmfmac43430-sdio.bin"' 'PiZeroW 43430 firmware .bin'
+          check 'test -f "$T/etc/hostapd/hostapd.conf"' 'hostapd.conf'
+          check 'grep -q "ssid=PU2PNY-V2" "$T/etc/hostapd/hostapd.conf"' 'SSID PU2PNY-V2 configured'
+          check 'test -x "$T/etc/init.d/S50pu2pnyap"' 'AP bring-up init script (executable)'
+          check 'test -f "$T/www/index.html"' 'panel served (www/index.html)'
+          check 'find "$T/lib/modules" -name "brcmfmac.ko*" | grep -q .' 'brcmfmac kernel module'
+          check 'grep -aq httpd "$T/bin/busybox"' 'busybox httpd applet'
+          echo "hostname: $(cat "$T/etc/hostname" 2>/dev/null)"
+          test "$fail" = 0
+      - name: Package flashable image + SHA-256 + size
+        run: |
+          set -euo pipefail
+          cd br
+          IMG=output/images/sdcard.img
+          test -s "$IMG"
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp "$IMG" "$GITHUB_WORKSPACE/out/pu2pny-v2-lean-stage1-pi4.img"
+          cd "$GITHUB_WORKSPACE/out"
+          raw_bytes=$(stat -c%s pu2pny-v2-lean-stage1-pi4.img)
+          xz -T0 -6 pu2pny-v2-lean-stage1-pi4.img
+          sha256sum pu2pny-v2-lean-stage1-pi4.img.xz > pu2pny-v2-lean-stage1-pi4.img.xz.sha256
+          xz_bytes=$(stat -c%s pu2pny-v2-lean-stage1-pi4.img.xz)
+          cat > BUILD-INFO.txt <<EOF
+          build=PU2PNY-V2-LEAN-STAGE1
+          board=Raspberry Pi 4 (ARM32 / raspberrypi4_defconfig)
+          buildroot=$BR_VERSION
+          classification=TEST_STAGE1_AP_ONLY_NOT_APPROVED
+          commit=$SOURCE_COMMIT
+          raw_img_bytes=$raw_bytes
+          xz_img_bytes=$xz_bytes
+          ap_ssid=PU2PNY-V2
+          captive_url=http://10.43.0.1  (also pu2pny-v2.local)
+          wifi_firmware=brcmfmac43455 (Pi4) + brcmfmac43430 (PiZeroW), board txt + clm_blob
+          validation=SW/CI build + rootfs component check
+          hardware_validation=NOT_VERIFIED (AP broadcast not boot-tested)
+          EOF
+          cat pu2pny-v2-lean-stage1-pi4.img.xz.sha256; echo "raw=$raw_bytes xz=$xz_bytes"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pu2pny-v2-lean-stage1
+          path: out/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pu2pny-v2-lean-stage1
+          path: artifacts
+      - name: Publish Stage-1 prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd artifacts
+          xz -t pu2pny-v2-lean-stage1-pi4.img.xz
+          sha256sum -c pu2pny-v2-lean-stage1-pi4.img.xz.sha256
+          cat > NOTES.md <<'EOF'
+          # PU2PNY-V2 — Buildroot lean **Stage 1** (AP-only) — TEST
+
+          **Imagem de TESTE. Não aprovada. AP NÃO testado em hardware (HW=NOT_VERIFIED).**
+          Alvo desta imagem: **Raspberry Pi 4** (ARM32). Grave com Rufus/Etcher.
+
+          Objetivo único do Stage 1: a placa dá boot, sobe o Wi-Fi AP **PU2PNY-V2** (hostapd)
+          e serve o painel em **http://10.43.0.1** (e pu2pny-v2.local). Sem MMDVM/rádio/gateways.
+
+          Correção da causa do "sem AP": firmware Wi-Fi do Pi embarcado (brcmfmac43455 do Pi 4 e
+          brcmfmac43430 do Pi Zero W, com .txt por placa e clm_blob), driver brcmfmac, hostapd,
+          dnsmasq e script de subida do AP. A CI verificou que todos esses componentes estão na
+          imagem; falta apenas a confirmação no hardware pelo dono.
+
+          Base: Buildroot raspberrypi4_defconfig. Tamanho e SHA-256 no BUILD-INFO.txt.
+          EOF
+          gh release create pu2pny-v2-lean-stage1 \
+            ./pu2pny-v2-lean-stage1-pi4.img.xz ./pu2pny-v2-lean-stage1-pi4.img.xz.sha256 ./BUILD-INFO.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$SOURCE_COMMIT" --prerelease \
+            --title 'PU2PNY-V2 Buildroot lean Stage 1 (Pi 4, AP-only) — TEST, não aprovado, AP não testado em HW' \
+            --notes-file NOTES.md
+          gh release view pu2pny-v2-lean-stage1 --repo "$GITHUB_REPOSITORY" --json tagName,assets

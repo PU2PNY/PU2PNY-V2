@@ -1,0 +1,156 @@
+<!doctype html><html lang="pt-BR" data-theme="dark" class="pny-i18n-pending"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark light"><title>PU2PNY-V2</title>
+<link rel="icon" type="image/png" href="favicon.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>(function(){document.documentElement.setAttribute('data-theme',localStorage.getItem('pu2pny-theme')||'dark')})();</script>
+<link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="pny-v2.css">
+<style>.passrow{display:flex;gap:8px}.passrow input{flex:1}.signalbars{display:inline-flex;align-items:flex-end;gap:2px;height:16px;vertical-align:middle;margin-right:7px}.signalbars i{width:4px;background:var(--line);border-radius:1px}.signalbars i.on{background:var(--green)}
+.savednet{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card2);margin-bottom:8px}
+.savednet .info{min-width:0}.savednet .ssid{font-weight:900;font-size:15px;overflow:hidden;text-overflow:ellipsis}.savednet .tags{margin-top:3px;display:flex;gap:6px;flex-wrap:wrap}
+.savednet .tag{font-size:10px;font-weight:900;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.savednet .tag.conn{color:var(--green);border-color:color-mix(in srgb,var(--green) 55%,var(--line))}.savednet .tag.saved{color:var(--blue);border-color:color-mix(in srgb,var(--blue) 55%,var(--line))}
+.savednet .acts{display:flex;gap:6px;flex-wrap:wrap}.savednet .acts .btn{padding:6px 10px;font-size:12px}</style>
+</head><body><div class="shell">
+<header class="topnav">
+  <div class="brand"><img class="brandmark" src="favicon.png" alt="PU2PNY"><span class="brandtext"><b style="font-size:19px">PU2PNY-V2</b><small>Internet e rede</small></span></div>
+  <nav class="nav" id="mainNav"></nav>
+  <div class="navtools"><span class="pill"><span id="clockLocal">--:--:--</span></span><button class="btn" id="themeToggle">☀ Claro</button></div>
+</header>
+<main class="main">
+<div class="top"><div><h1>Internet</h1><p>Wi‑Fi, conexão via cabo, qualidade e redes de backup.</p></div><button class="btn" id="refresh">Atualizar agora</button></div>
+
+<section class="section"><div class="grid3">
+<article class="card"><h3>Conexão ativa</h3><div class="big" id="netState">Verificando...</div><div class="rows">
+  <div class="row"><span>Interface</span><b id="iface">—</b></div>
+  <div class="row" data-real-only><span>SSID</span><b id="ssid">—</b></div>
+  <div class="row" data-real-only><span>Sinal</span><b id="signal">—</b></div>
+  <div class="row"><span>Qualidade da Internet</span><b id="quality">—</b></div>
+  <div class="row" data-real-only><span>IP</span><b id="ip">—</b></div></div></article>
+
+<article class="card"><h3>Conexão via cabo</h3><div class="big" id="ethState">—</div><div class="rows">
+  <div class="row"><span>Interface</span><b id="ethIface">—</b></div>
+  <div class="row" data-real-only><span>Velocidade</span><b id="ethSpeed">—</b></div>
+  <div class="row" data-real-only><span>Duplex</span><b id="ethDuplex">—</b></div></div></article>
+
+<article class="card"><h3>Caminho da conexão</h3><div class="big" id="health">—</div><div class="rows">
+  <div class="row"><span>Latência</span><b id="lat">—</b></div>
+  <div class="row"><span>Perda</span><b id="loss">—</b></div>
+  <div class="row"><span>Jitter</span><b id="jit">—</b></div></div></article>
+</div></section>
+
+<section class="section"><div class="grid2">
+<article class="card"><h3>Redes Wi‑Fi salvas</h3>
+  <div id="savedNets"><div class="muted">Carregando...</div></div>
+  <div class="actions" style="margin:12px 0"><button class="btn" id="scan">↻ Buscar redes</button><button class="btn" id="addBackup">Adicionar rede de backup</button></div>
+
+  <div id="primaryForm" class="hidden" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
+    <h4 style="margin:0 0 8px">Substituir rede principal</h4>
+    <div class="formgrid">
+      <div class="field"><label>Rede encontrada</label><select id="primarySelect"><option value="">Buscar redes primeiro</option></select></div>
+      <div class="field"><label>Ou adicionar manualmente</label><input id="primaryManual" placeholder="Nome da rede (SSID)" maxlength="64"></div>
+    </div>
+    <label>Senha</label><div class="passrow"><input id="primaryPass" type="password" placeholder="Senha"><button class="btn" type="button" data-showpass="primaryPass">Mostrar</button></div>
+    <div class="actions" style="margin-top:10px"><button class="btn primary" id="savePrimary">Aplicar rede principal</button><button class="btn" type="button" data-cancel="primaryForm">Cancelar</button></div>
+  </div>
+
+  <div id="secondForm" class="hidden" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
+    <h4 style="margin:0 0 8px" id="secondFormTitle">Adicionar rede de backup</h4>
+    <div class="formgrid">
+      <div class="field"><label>Rede encontrada</label><select id="secondSelect"><option value="">Buscar redes primeiro</option></select></div>
+      <div class="field"><label>Ou adicionar manualmente</label><input id="secondManual" placeholder="Nome da rede (SSID)" maxlength="64"></div>
+    </div>
+    <label>Senha</label><div class="passrow"><input id="secondPass" type="password" placeholder="Senha"><button class="btn" type="button" data-showpass="secondPass">Mostrar</button></div>
+    <div class="actions" style="margin-top:10px"><button class="btn primary" id="saveSecond">Salvar rede de backup</button><button class="btn" type="button" data-cancel="secondForm">Cancelar</button></div>
+  </div>
+  <p id="wifiResult" class="statusmsg"></p>
+  <p class="muted">A segunda rede funciona como backup. Se a atual cair, o PU2PNY tenta a outra; a escolha automática considera o sinal sem trocar por diferenças pequenas. Ethernet tem prioridade quando disponível.</p>
+</article>
+
+<article class="card"><h3>Diagnóstico</h3><div class="rows">
+  <div class="row"><span>Estado da Internet</span><b id="diagInternet">—</b></div>
+  <div class="row"><span>Interface usada</span><b id="diagIface">—</b></div>
+  <div class="row" data-real-only><span>Gateway</span><b id="diagGateway">—</b></div>
+  <div class="row" data-real-only><span>DNS ativo</span><b id="diagDns">—</b></div>
+  <div class="row" data-real-only><span>Destino testado</span><b id="diagTarget">—</b></div>
+  <div class="row" data-real-only><span>Última atualização</span><b id="diagUpdated">—</b></div></div>
+  <p class="muted">“Online” significa que o hotspot tem rota e conectividade observada. Um hop sem resposta ICMP, sozinho, não indica falha.</p>
+</article>
+</div></section>
+</main></div>
+<script src="ui-common.js"></script><script>
+PNY.nav('internet');PNY.initTheme();var wifiProfiles={};
+function bars(signal){var n=Math.max(0,Math.min(4,Math.round(Number(signal||0)/25))),h=[6,9,12,16];return '<span class="signalbars">'+h.map(function(hh,i){return '<i class="'+(i<n?'on':'')+'" style="height:'+hh+'px"></i>'}).join('')+'</span>'}
+async function load(){
+  try{var d=await PNY.getj('/api/dashboard'),n=d.connectivity||{},t=d.telemetry||{},net=t.network||{},w=net.wifi||{},e=net.ethernet||{};
+    PNY.q('netState').textContent=n.internet?'Online':'Offline';PNY.q('netState').className='big '+(n.internet?'green':'red');
+    PNY.q('iface').textContent=n.default_interface||n.client_interface||'—';
+    PNY.q('ssid').textContent=n.wifi_ssid||w.ssid||'—';
+    PNY.q('signal').innerHTML=n.wifi_signal?(bars(n.wifi_signal)+n.wifi_signal+'% · '+(n.wifi_quality||'')):(w.rssi_dbm!=null?w.rssi_dbm+' dBm':'—');
+    PNY.q('quality').textContent=n.internet?(n.internet_quality||'—'):'Offline';
+    PNY.q('ip').textContent=(n.ipv4||[]).join(', ')||'—';
+    PNY.q('ethState').textContent=e.carrier?'Link ativo':'Sem link';PNY.q('ethState').className='big '+(e.carrier?'green':'yellow');
+    PNY.q('ethIface').textContent=e.interface||n.ethernet_interface||'—';PNY.q('ethSpeed').textContent=e.speed_mbps?e.speed_mbps+' Mbps':'—';PNY.q('ethDuplex').textContent=e.duplex||'—';
+    PNY.q('diagInternet').textContent=n.internet?'Online':'Offline';PNY.q('diagIface').textContent=n.default_interface||n.client_interface||'—';
+  }catch(e){}
+  try{var x=await PNY.getj('/api/netdiag'),m=x.metrics||{},ql={best:'Melhor opção',good:'Bom',poor:'Ruim',terrible:'Péssimo'},lbl=x.quality_label||ql[x.health]||'—';
+    PNY.q('health').textContent=lbl;PNY.q('health').className='big '+(x.health==='best'?'green':x.health==='terrible'?'red':'yellow');
+    PNY.q('lat').textContent=m.latency_ms==null?'—':m.latency_ms+' ms';PNY.q('loss').textContent=m.loss_pct==null?'—':m.loss_pct+'%';PNY.q('jit').textContent=m.jitter_ms==null?'—':m.jitter_ms+' ms';
+    PNY.q('diagGateway').textContent=x.gateway||'—';PNY.q('diagTarget').textContent=x.target||'—';PNY.q('diagDns').textContent=(x.dns_servers||[]).join(' · ')||'—';PNY.q('diagUpdated').textContent=PNY.fmtTime(x.updated);
+  }catch(e){}
+  loadProfiles();PNY.sweepRealOnly(document);
+}
+function reveal(id){['primaryForm','secondForm'].forEach(function(f){PNY.q(f).classList.toggle('hidden',f!==id)});if(id)PNY.q(id).scrollIntoView({behavior:'smooth',block:'nearest'})}
+function savedRow(role,ssid,connected,saved){
+  var tags='';if(connected)tags+='<span class="tag conn">Conectada</span>';if(role==='primary')tags+='<span class="tag saved">Principal</span>';else tags+='<span class="tag saved">'+(saved?'Backup salvo':'Não configurada')+'</span>';
+  var acts='';
+  if(role==='primary'){acts='<button class="btn" data-edit="primaryForm">Substituir</button>';}
+  else{acts='<button class="btn" data-edit="secondForm">'+(saved?'Substituir':'Adicionar')+'</button>';if(saved){acts+='<button class="btn" data-switch="1">Tornar principal</button><button class="btn danger" data-remove="1">Remover</button>';}}
+  return '<div class="savednet"><div class="info"><div class="ssid">'+PNY.esc(ssid||'—')+'</div><div class="tags">'+tags+'</div></div><div class="acts">'+acts+'</div></div>';
+}
+async function loadProfiles(){try{var p=await PNY.getj('/api/network/wifi/profiles');wifiProfiles=p;var active=p.active_ssid||'',p1=(p.primary&&p.primary.ssid)||'',p2=(p.secondary&&p.secondary.ssid)||'';
+  var host=PNY.q('savedNets');
+  host.innerHTML=savedRow('primary',p1||'Rede principal não identificada',active&&active===p1,!!p1)+savedRow('secondary',p2||'',active&&active===p2,!!p2);
+  host.querySelectorAll('[data-edit]').forEach(function(b){b.onclick=function(){if(b.dataset.edit==='secondForm')PNY.q('secondFormTitle').textContent=p2?'Substituir rede de backup':'Adicionar rede de backup';reveal(b.dataset.edit)}});
+  var sw=host.querySelector('[data-switch]');if(sw)sw.onclick=switchNetworks;
+  var rm=host.querySelector('[data-remove]');if(rm)rm.onclick=removeBackup;
+}catch(e){}}
+async function switchNetworks(){if(!confirm('Tornar a rede de backup a rede principal? A conexão pode cair por alguns segundos.'))return;var op=PNY.operation('Trocando redes','Promovendo a rede de backup a principal...');try{await PNY.getj('/api/network/wifi/profiles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'switch'}),pnySilent:true},20000);op.done('Redes trocadas.');setTimeout(load,1200)}catch(e){op.error(e.message);PNY.q('wifiResult').textContent=e.message}}
+async function removeBackup(){if(!confirm('Remover a rede de backup salva?'))return;var op=PNY.operation('Removendo rede de backup','Apagando o perfil de backup sem alterar a rede principal...');try{await PNY.getj('/api/network/wifi/profiles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'remove-secondary'}),pnySilent:true},12000);op.done('Rede de backup removida.');setTimeout(load,800)}catch(e){op.error(e.message);PNY.q('wifiResult').textContent=e.message}}
+PNY.q('addBackup').onclick=function(){PNY.q('secondFormTitle').textContent=(wifiProfiles.secondary&&wifiProfiles.secondary.ssid)?'Substituir rede de backup':'Adicionar rede de backup';reveal('secondForm')};
+document.querySelectorAll('[data-cancel]').forEach(function(b){b.onclick=function(){PNY.q(b.dataset.cancel).classList.add('hidden')}});
+function fillOptions(rows){rows=rows||[];var cur=wifiProfiles.active_ssid||(wifiProfiles.primary&&wifiProfiles.primary.ssid)||'';
+  var primary=cur?'<option value="'+PNY.esc(cur)+'">'+PNY.esc(cur)+' · conectada</option>':'<option value="">Rede conectada não identificada</option>';
+  var others=rows.filter(function(x){return x.ssid&&x.ssid!==cur}).map(function(x){return '<option value="'+PNY.esc(x.ssid)+'" data-bssid="'+PNY.esc(x.bssid||'')+'">'+PNY.esc(x.ssid)+' · '+(x.signal||'—')+'%'+(x.channel?' · canal '+x.channel:'')+'</option>'}).join('');
+  if(!others)others='<option value="">Nenhuma outra rede — use o campo manual</option>';
+  PNY.q('primarySelect').innerHTML=primary+others;PNY.q('secondSelect').innerHTML=others;
+}
+async function scan(){var b=PNY.q('scan'),deadline=Date.now()+18000,first=true;b.disabled=true;b.textContent='Buscando...';PNY.q('wifiResult').textContent='Buscando redes. Em hotspot de uma só placa o AP pode sumir por alguns segundos e voltar sozinho.';
+  while(Date.now()<deadline){try{var st=await PNY.getj('/api/wifi/scan'+(first?'?refresh=1':''),null,7000);first=false;
+    if(st.state==='ready'){var rows=st.networks||[];fillOptions(rows);PNY.q('wifiResult').textContent=rows.length?(rows.length+' rede(s) encontrada(s).'):'Nenhuma rede retornou; informe o SSID manualmente.';b.disabled=false;b.textContent='↻ Buscar redes';return}
+    if(st.state==='error'){fillOptions([]);PNY.q('wifiResult').textContent=(st.message||'Falha na busca');b.disabled=false;b.textContent='↻ Buscar redes';return}
+  }catch(e){}await new Promise(function(r){setTimeout(r,400)})}
+  fillOptions([]);PNY.q('wifiResult').textContent='A busca demorou além do limite. Tente novamente.';b.disabled=false;b.textContent='↻ Buscar redes';
+}
+PNY.q('scan').onclick=scan;
+document.querySelectorAll('[data-showpass]').forEach(function(b){b.onclick=function(){var x=PNY.q(b.dataset.showpass);if(!x)return;var show=x.type==='password';x.type=show?'text':'password';b.textContent=show?'Ocultar':'Mostrar'}});
+PNY.q('savePrimary').onclick=async function(){var sel=PNY.q('primarySelect'),o=sel.options[sel.selectedIndex],manual=PNY.q('primaryManual').value.trim(),ssid=manual||sel.value,bssid=manual?'':(o?o.dataset.bssid||'':'');
+  if(!ssid){PNY.q('wifiResult').textContent='Busque uma rede ou informe o SSID manualmente.';return}
+  var op=PNY.operation('Aplicando rede principal','Validando senha, associação e endereço IP. A rede anterior fica como recuperação...');
+  try{await PNY.getj('/api/network/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ssid:ssid,password:PNY.q('primaryPass').value,bssid:bssid,keep_ap:false}),pnySilent:true},12000).catch(function(){return {}});
+    for(var i=0;i<75;i++){await new Promise(function(r){setTimeout(r,400)});try{var st=await PNY.getj('/api/network/connect/status',null,3500);
+      if(st.state==='connected'){op.done(st.message||'Rede principal conectada.');PNY.q('primaryPass').value='';PNY.q('primaryManual').value='';reveal(null);load();return}
+      if(st.state==='error'||st.state==='recovery_ap')throw new Error(st.message||'A rede não foi aplicada; a anterior foi preservada.')}catch(e){if(i>45&&e.message)throw e}}
+    throw new Error('A nova rede não confirmou conexão dentro do limite; tente novamente.');
+  }catch(e){op.error(e.message);PNY.q('wifiResult').textContent=e.message}
+};
+PNY.q('saveSecond').onclick=async function(){var sel=PNY.q('secondSelect'),o=sel.options[sel.selectedIndex],manual=PNY.q('secondManual').value.trim(),ssid=manual||sel.value,bssid=manual?'':(o?o.dataset.bssid||'':'');
+  if(!ssid){PNY.q('wifiResult').textContent='Busque uma rede ou informe o SSID manualmente.';return}
+  var op=PNY.operation('Salvando rede de backup','Validando o perfil sem alterar a rede principal...');
+  try{await PNY.getj('/api/network/wifi/profiles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save-secondary',ssid:ssid,password:PNY.q('secondPass').value,bssid:bssid}),pnySilent:true},15000);
+    op.step('Rede de backup salva. Comparando sinais...');
+    await PNY.getj('/api/network/wifi/profiles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'auto-select'}),pnySilent:true},8000);
+    op.done('Rede de backup salva; seleção automática ativada.');PNY.q('secondPass').value='';PNY.q('secondManual').value='';reveal(null);setTimeout(load,900);
+  }catch(e){op.error(e.message);PNY.q('wifiResult').textContent=e.message}
+};
+PNY.q('refresh').onclick=load;load();setInterval(function(){if(!document.hidden)load()},15000);
+</script></body></html>

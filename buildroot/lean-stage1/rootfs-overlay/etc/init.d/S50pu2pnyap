@@ -1,0 +1,33 @@
+#!/bin/sh
+# PU2PNY-V2 Stage 1: bring up the wlan0 AP + DHCP/DNS + static panel.
+AP_IF=wlan0
+PIDDIR=/run
+start() {
+	printf 'PU2PNY-V2 Stage1: starting AP... '
+	modprobe brcmfmac 2>/dev/null || true
+	i=0
+	while [ $i -lt 30 ] && [ ! -e /sys/class/net/$AP_IF ]; do sleep 1; i=$((i+1)); done
+	if [ ! -e /sys/class/net/$AP_IF ]; then
+		echo "FAIL: $AP_IF absent (wifi driver/firmware not loaded)"
+		return 1
+	fi
+	command -v rfkill >/dev/null 2>&1 && rfkill unblock all 2>/dev/null
+	ip link set "$AP_IF" up
+	ip addr flush dev "$AP_IF" 2>/dev/null
+	ip addr add 10.43.0.1/24 dev "$AP_IF"
+	hostapd -B -P "$PIDDIR/hostapd.pid" /etc/hostapd/hostapd.conf || { echo "FAIL: hostapd"; return 1; }
+	dnsmasq --pid-file="$PIDDIR/dnsmasq.pid" -C /etc/dnsmasq-ap.conf || echo "warn: dnsmasq did not start"
+	httpd -p 80 -h /www || echo "warn: httpd did not start"
+	echo "OK (SSID PU2PNY-V2, http://10.43.0.1)"
+}
+stop() {
+	[ -f "$PIDDIR/hostapd.pid" ] && kill "$(cat $PIDDIR/hostapd.pid)" 2>/dev/null
+	[ -f "$PIDDIR/dnsmasq.pid" ] && kill "$(cat $PIDDIR/dnsmasq.pid)" 2>/dev/null
+	killall httpd 2>/dev/null
+}
+case "$1" in
+	start) start ;;
+	stop) stop ;;
+	restart) stop; start ;;
+	*) echo "Usage: $0 {start|stop|restart}"; exit 1 ;;
+esac

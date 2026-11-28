@@ -1,0 +1,122 @@
+<!doctype html><html lang="pt-BR" data-theme="dark" class="pny-i18n-pending"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark light"><title>PU2PNY-V2</title>
+<link rel="icon" type="image/png" href="favicon.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>(function(){document.documentElement.setAttribute('data-theme',localStorage.getItem('pu2pny-theme')||'dark')})();</script>
+<link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="pny-v2.css">
+<style>
+.protogrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.protocard{border:1px solid var(--line);background:var(--card2);border-radius:14px;padding:14px;text-align:left;cursor:pointer;color:var(--text);font:inherit}
+.protocard:hover{border-color:var(--blue)}.protocard.active{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
+.protocard b{font-size:16px;display:block}.protocard small{color:var(--muted);display:block;margin-top:5px}
+.protocard .st{display:inline-block;margin-top:9px;font-size:11px;font-weight:900;padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+.protocard.active .st{color:var(--green);border-color:color-mix(in srgb,var(--green) 55%,var(--line))}
+.protocard.unconf .st{color:var(--yellow)}
+@media(max-width:760px){.protogrid{grid-template-columns:1fr 1fr}}@media(max-width:480px){.protogrid{grid-template-columns:1fr}}
+</style></head><body><div class="shell">
+<header class="topnav">
+  <div class="brand"><img class="brandmark" src="favicon.png" alt="PU2PNY"><span class="brandtext"><b style="font-size:19px">PU2PNY-V2</b><small>Hotspot / Protocolos</small></span></div>
+  <nav class="nav" id="mainNav"></nav>
+  <div class="navtools"><span class="pill"><span id="clockLocal">--:--:--</span></span><button class="btn" id="themeToggle">☀ Claro</button></div>
+</header>
+<main class="main">
+<div class="top"><div><h1>Protocolos</h1><p>Troca de protocolo, perfis e visibilidade do hotspot.</p></div><button class="btn" id="refresh">Atualizar agora</button></div>
+
+<section class="section"><article class="card">
+  <h2>Troca de protocolo</h2>
+  <p class="muted">Escolha o protocolo ativo. A troca é transacional: salva o perfil, aplica e confirma, com retorno automático se falhar.</p>
+  <div class="protogrid" id="protogrid" style="margin-top:12px"></div>
+  <p id="protoResult" class="statusmsg"></p>
+</article></section>
+
+<section class="section"><article class="card">
+  <h2>Identidade do hotspot</h2>
+  <p class="muted">Indicativo e DMR ID usados pelo rádio, gateways e diretórios. Alterar reaplica o registro nos gateways.</p>
+  <div class="formgrid" style="margin-top:12px">
+    <div class="field"><label for="callsign">Indicativo</label><input id="callsign" autocapitalize="characters" autocomplete="off" placeholder="Ex.: PU2ABC" maxlength="16"></div>
+    <div class="field"><label for="dmrid">DMR ID</label><input id="dmrid" inputmode="numeric" autocomplete="off" placeholder="Ex.: 7240000" maxlength="9"></div>
+  </div>
+  <button class="btn primary" id="saveIdentity" style="margin-top:10px">Salvar identidade</button>
+  <p id="identityResult" class="statusmsg"></p>
+</article></section>
+
+<section class="section"><div class="grid2">
+<article class="card">
+  <h2>Perfil do protocolo</h2>
+  <div class="rows">
+    <div class="row"><span>Protocolo ativo</span><b id="activeProto">—</b></div>
+    <div class="row" data-real-only><span>Servidor / rede</span><b id="server">—</b></div>
+    <div class="row" data-real-only><span>Frequência</span><b id="freq">—</b></div>
+    <div class="row" data-real-only><span>Código de cor</span><b id="cc">—</b></div>
+    <div class="row" data-real-only><span>Slot de tempo</span><b id="slot">—</b></div>
+  </div>
+  <p class="muted" style="margin-top:10px">A configuração detalhada de servidor, senha e opções do master é feita durante o assistente e reaplicada aqui a cada troca.</p>
+</article>
+
+<article class="card">
+  <h2>Visibilidade do hotspot</h2>
+  <p class="muted">Público aparece nos diretórios e mapas da rede. Privado opera sem publicar o indicativo nas listas públicas.</p>
+  <div class="segrow" id="visibility" role="group" aria-label="Visibilidade" style="margin-top:12px">
+    <button type="button" data-v="public">Público</button><button type="button" data-v="private">Privado</button>
+  </div>
+  <p id="visResult" class="statusmsg"></p>
+</article>
+</div></section>
+</main></div>
+<script src="ui-common.js"></script><script>
+PNY.nav('hotspot');PNY.initTheme();
+var cfg={},profiles={};
+var LABEL={DMR:'DMR',DSTAR:'D-Star',YSF:'YSF/C4FM',P25:'P25',NXDN:'NXDN',POCSAG:'POCSAG / DAPNET'};
+var ORDER=['DMR','DSTAR','YSF','P25','NXDN','POCSAG'];
+function renderGrid(){
+  var active=String(cfg.protocol||'').toUpperCase();
+  PNY.q('protogrid').innerHTML=ORDER.map(function(p){var x=profiles[p]||{},ok=!!x.rx_hz;
+    return '<button class="protocard '+(p===active?'active':ok?'':'unconf')+'" data-p="'+p+'"><b>'+LABEL[p]+'</b><small>'+(ok?((Number(x.rx_hz)/1e6).toFixed(4)+' MHz'):'Perfil não configurado')+'</small><span class="st">'+(p===active?'Ativo':ok?'Pronto':'Configurar')+'</span></button>';
+  }).join('');
+  PNY.q('protogrid').querySelectorAll('.protocard').forEach(function(b){b.onclick=function(){activate(b.dataset.p)}});
+}
+async function activate(p){
+  var x=profiles[p]||{};
+  if(!x.rx_hz){PNY.q('protoResult').textContent='O perfil '+LABEL[p]+' ainda não foi configurado. Configure a frequência no assistente antes de ativar.';return}
+  var op=PNY.operation('Ativando '+LABEL[p],'Salvando o perfil, aplicando e aguardando a confirmação dos serviços...');
+  try{await PNY.getj('/api/protocol/profiles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'activate',protocol:p}),pnySilent:true},70000);
+    op.done(LABEL[p]+' ativado.');PNY.q('protoResult').textContent=LABEL[p]+' ativado.';setTimeout(load,900);
+  }catch(e){op.error(e.message);PNY.q('protoResult').textContent=e.message}
+}
+function renderProfile(){
+  var p=String(cfg.protocol||'').toUpperCase(),x=profiles[p]||{};
+  PNY.q('activeProto').textContent=LABEL[p]||'—';
+  PNY.q('server').textContent=cfg.server_name||x.server_name||'—';
+  PNY.q('freq').textContent=x.rx_hz?(Number(x.rx_hz)/1e6).toFixed(6)+' MHz':(cfg.rx_hz?(Number(cfg.rx_hz)/1e6).toFixed(6)+' MHz':'—');
+  PNY.q('cc').textContent=cfg.color_code==null?'—':cfg.color_code;
+  PNY.q('slot').textContent=cfg.dmr_slot||x.dmr_slot||'—';
+  PNY.sweepRealOnly(document);
+}
+function renderVisibility(){
+  var pub=cfg.public!==false; /* default public unless the device reports private */
+  PNY.q('visibility').querySelectorAll('button').forEach(function(b){b.classList.toggle('active',(b.dataset.v==='public')===pub)});
+}
+PNY.q('visibility').querySelectorAll('button').forEach(function(b){b.onclick=async function(){
+  var pub=b.dataset.v==='public';
+  var op=PNY.operation('Alterando visibilidade','Aplicando modo '+(pub?'público':'privado')+'...');
+  try{await PNY.getj('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'visibility',public:pub}),pnySilent:true},15000);
+    op.done('Modo '+(pub?'público':'privado')+' aplicado.');cfg.public=pub;renderVisibility()}
+  catch(e){op.error(e.message);PNY.q('visResult').textContent=e.message}
+}});
+function renderIdentity(){if(document.activeElement!==PNY.q('callsign'))PNY.q('callsign').value=cfg.callsign||'';if(document.activeElement!==PNY.q('dmrid'))PNY.q('dmrid').value=cfg.dmr_id||''}
+PNY.q('saveIdentity').onclick=async function(){
+  var call=PNY.q('callsign').value.trim().toUpperCase(),id=PNY.q('dmrid').value.trim();
+  if(!/^[A-Z0-9/-]{3,16}$/.test(call)){PNY.q('identityResult').textContent='Informe um indicativo válido.';return}
+  if(!/^\d{4,9}$/.test(id)){PNY.q('identityResult').textContent='Informe um DMR ID válido (apenas números).';return}
+  var op=PNY.operation('Salvando identidade','Gravando indicativo e DMR ID e reaplicando o registro nos gateways...');
+  try{await PNY.getj('/api/identity/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({callsign:call,dmr_id:id}),pnySilent:true},30000);
+    op.done('Identidade enviada; aplicando nos gateways...');PNY.q('identityResult').textContent='Identidade enviada; aplicando...';setTimeout(load,900);
+  }catch(e){op.error(e.message);PNY.q('identityResult').textContent=e.message}
+};
+async function load(){
+  try{cfg=await PNY.getj('/api/config')}catch(e){cfg={}}
+  try{var d=await PNY.getj('/api/protocol/profiles');profiles=d.profiles||{}}catch(e){profiles={}}
+  renderGrid();renderProfile();renderVisibility();renderIdentity();
+}
+PNY.q('refresh').onclick=load;load();setInterval(function(){if(!document.hidden)load()},20000);
+</script></body></html>

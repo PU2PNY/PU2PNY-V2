@@ -1,0 +1,10 @@
+# PU2PNY-V2 lean Stage 1 — applied on top of raspberrypi4_defconfig.
+# AP-first minimal: boot + wlan0 AP "PU2PNY-V2" + captive panel. Nothing else.
+BR2_TARGET_GENERIC_HOSTNAME="pu2pny-v2"
+BR2_TARGET_GENERIC_ISSUE="PU2PNY-V2 TEST (Buildroot lean Stage 1 - NOT approved)"
+BR2_PACKAGE_HOSTAPD=y
+BR2_PACKAGE_HOSTAPD_DRIVER_NL80211=y
+BR2_PACKAGE_DNSMASQ=y
+BR2_PACKAGE_IW=y
+BR2_PACKAGE_IPROUTE2=y
+BR2_PACKAGE_WIRELESS_REGDB=y
