@@ -1,0 +1,145 @@
+name: PU2PNY-V2 lean Stage 2 (Buildroot AP + panel daemon, Pi 4 / ARM32)
+on:
+  push:
+    branches: [build/v2-lean-stage2]
+    paths:
+      - '.github/workflows/v2-lean-stage2.yml'
+      - 'buildroot/lean-stage2/**'
+      - 'buildroot/lean-stage1/**'
+  workflow_dispatch:
+env:
+  SOURCE_COMMIT: ${{ github.sha }}
+  BR_VERSION: '2024.02.9'
+permissions:
+  contents: read
+concurrency:
+  group: pu2pny-v2-lean-stage2
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.9'
+          cache: false
+      - name: Cross-compile the lean panel daemon (ARMv6, static)
+        run: |
+          set -euo pipefail
+          cd buildroot/lean-stage2/daemon
+          GO111MODULE=on GOOS=linux GOARCH=arm GOARM=6 CGO_ENABLED=0 \
+            go build -trimpath -ldflags="-s -w" -o "$GITHUB_WORKSPACE/buildroot/lean-stage2/rootfs-overlay/usr/local/bin/pu2pnyd-lean" .
+          chmod 0755 "$GITHUB_WORKSPACE/buildroot/lean-stage2/rootfs-overlay/usr/local/bin/pu2pnyd-lean"
+          file "$GITHUB_WORKSPACE/buildroot/lean-stage2/rootfs-overlay/usr/local/bin/pu2pnyd-lean" | grep -Eq 'ELF 32-bit.*ARM'
+          ! file "$GITHUB_WORKSPACE/buildroot/lean-stage2/rootfs-overlay/usr/local/bin/pu2pnyd-lean" | grep -Eqi 'aarch64|ARM64'
+      - name: Free disk space for Buildroot
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/lib/android /opt/hostedtoolcache || true
+          df -h /
+      - name: Install host build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential cpio rsync file bc unzip wget python3 bison flex libssl-dev git xz-utils
+      - name: Fetch Buildroot ${{ env.BR_VERSION }}
+        run: git clone --depth 1 --branch "$BR_VERSION" https://github.com/buildroot/buildroot br
+      - name: Configure (raspberrypi4_defconfig + Stage-2 fragment + overlays)
+        run: |
+          set -euo pipefail
+          cd br
+          make raspberrypi4_defconfig
+          cat "$GITHUB_WORKSPACE/buildroot/lean-stage2/stage2.fragment" >> .config
+          printf 'BR2_ROOTFS_OVERLAY="%s %s"\n' \
+            "$GITHUB_WORKSPACE/buildroot/lean-stage1/rootfs-overlay" \
+            "$GITHUB_WORKSPACE/buildroot/lean-stage2/rootfs-overlay" >> .config
+          printf 'BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="%s"\n' "$GITHUB_WORKSPACE/buildroot/lean-stage1/busybox.fragment" >> .config
+          make olddefconfig
+          grep -E 'WPA_SUPPLICANT=|HOSTAPD=|DNSMASQ=|ROOTFS_OVERLAY=|GENERIC_HOSTNAME=' .config
+      - name: Build (toolchain + kernel + rootfs + image)
+        run: cd br && make -j"$(nproc)"
+      - name: Verify Stage-2 components in the rootfs
+        run: |
+          set -euo pipefail
+          cd br; T=output/target; fail=0
+          check(){ if eval "$1"; then echo "PASS: $2"; else echo "FAIL: $2"; fail=1; fi; }
+          check 'f="$T/usr/local/bin/pu2pnyd-lean"; test -x "$f" && file "$f" | grep -Eq "ELF 32-bit.*ARM"' 'pu2pnyd-lean (ARM) present'
+          check 'test -e "$T/usr/sbin/wpa_supplicant"' 'wpa_supplicant present'
+          check 'test -x "$T/usr/local/sbin/pu2pny-ap"' 'pu2pny-ap helper'
+          check 'grep -q pu2pnyd-lean "$T/etc/init.d/S50pu2pnyap"' 'init starts the daemon'
+          check 'test -f "$T/usr/sbin/hostapd"' 'hostapd present'
+          check 'test -s "$T/lib/firmware/brcm/brcmfmac43455-sdio.bin"' 'Pi4 wifi firmware (from stage1 overlay)'
+          check 'test -f "$T/www/index.html"' 'panel www present'
+          test "$fail" = 0
+      - name: Package image + SHA-256 + size
+        run: |
+          set -euo pipefail
+          cd br; IMG=output/images/sdcard.img; test -s "$IMG"
+          mkdir -p "$GITHUB_WORKSPACE/out"; cp "$IMG" "$GITHUB_WORKSPACE/out/pu2pny-v2-lean-stage2-pi4.img"
+          cd "$GITHUB_WORKSPACE/out"
+          raw=$(stat -c%s pu2pny-v2-lean-stage2-pi4.img)
+          xz -T0 -6 pu2pny-v2-lean-stage2-pi4.img
+          sha256sum pu2pny-v2-lean-stage2-pi4.img.xz > pu2pny-v2-lean-stage2-pi4.img.xz.sha256
+          xzb=$(stat -c%s pu2pny-v2-lean-stage2-pi4.img.xz)
+          cat > BUILD-INFO.txt <<EOF
+          build=PU2PNY-V2-LEAN-STAGE2
+          board=Raspberry Pi 4 (ARM32 / raspberrypi4_defconfig)
+          buildroot=$BR_VERSION
+          classification=TEST_STAGE2_AP_PLUS_PANEL_DAEMON_NOT_APPROVED
+          commit=$SOURCE_COMMIT
+          raw_img_bytes=$raw
+          xz_img_bytes=$xzb
+          adds=pu2pnyd-lean (live /api telemetry, minimal full-report) + wpa_supplicant WiFi wizard
+          validation=SW/CI build + rootfs component check
+          hardware_validation=NOT_VERIFIED
+          EOF
+          cat pu2pny-v2-lean-stage2-pi4.img.xz.sha256; echo "raw=$raw xz=$xzb"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pu2pny-v2-lean-stage2
+          path: out/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pu2pny-v2-lean-stage2
+          path: artifacts
+      - name: Publish Stage-2 prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd artifacts
+          xz -t pu2pny-v2-lean-stage2-pi4.img.xz
+          sha256sum -c pu2pny-v2-lean-stage2-pi4.img.xz.sha256
+          cat > NOTES.md <<'EOF'
+          # PU2PNY-V2 — Buildroot lean **Stage 2** (AP + panel daemon) — TEST
+
+          **Imagem de TESTE. Não aprovada. HW=NOT_VERIFIED.** Alvo: Raspberry Pi 4 (ARM32).
+          Base: Stage 1 (confirmado no HW). Adiciona o "cérebro": o daemon pu2pnyd-lean.
+
+          - Painel agora com dados AO VIVO em /api: telemetria (cpu_percent, temperatura,
+            memória), versão, conectividade — acaba o "—". Full-report deixa de dar 501.
+          - Assistente de Wi-Fi (wpa_supplicant/iw): varrer e entrar na rede de casa. Rádio
+            único => ao entrar na rede, o AP sai do ar; o painel avisa para reconectar à sua
+            rede e acessar http://pu2pny-v2.local. Se falhar, o AP volta sozinho.
+          - Portal cativo: sondas do SO são redirecionadas para o painel.
+
+          Sem RF/MMDVM (Stage 3) e sem crossmode/xombe (Stage 4). Tamanho e SHA-256 no BUILD-INFO.txt.
+          O handoff de Wi-Fi de rádio único NÃO foi testado em hardware — confirmar no Pi.
+          EOF
+          gh release create pu2pny-v2-lean-stage2 \
+            ./pu2pny-v2-lean-stage2-pi4.img.xz ./pu2pny-v2-lean-stage2-pi4.img.xz.sha256 ./BUILD-INFO.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$SOURCE_COMMIT" --prerelease \
+            --title 'PU2PNY-V2 Buildroot lean Stage 2 (Pi 4, AP + panel daemon) — TEST, não aprovado' \
+            --notes-file NOTES.md
+          gh release view pu2pny-v2-lean-stage2 --repo "$GITHUB_REPOSITORY" --json tagName,assets

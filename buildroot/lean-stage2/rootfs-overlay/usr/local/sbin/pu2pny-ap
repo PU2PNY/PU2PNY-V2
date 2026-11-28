@@ -1,0 +1,21 @@
+#!/bin/sh
+# PU2PNY-V2 lean: bring the wlan0 AP (hostapd+dnsmasq) up or down.
+AP_IF=wlan0
+case "${1:-}" in
+	start)
+		modprobe brcmfmac 2>/dev/null || true
+		i=0; while [ $i -lt 20 ] && [ ! -e /sys/class/net/$AP_IF ]; do sleep 1; i=$((i+1)); done
+		pkill wpa_supplicant 2>/dev/null || true
+		command -v rfkill >/dev/null 2>&1 && rfkill unblock all 2>/dev/null
+		ip link set "$AP_IF" up
+		ip addr flush dev "$AP_IF" 2>/dev/null || true
+		ip addr add 10.43.0.1/24 dev "$AP_IF"
+		hostapd -B -P /run/hostapd.pid /etc/hostapd/hostapd.conf || exit 1
+		dnsmasq --pid-file=/run/dnsmasq.pid -C /etc/dnsmasq-ap.conf || true
+		;;
+	stop)
+		[ -f /run/hostapd.pid ] && kill "$(cat /run/hostapd.pid)" 2>/dev/null; rm -f /run/hostapd.pid
+		[ -f /run/dnsmasq.pid ] && kill "$(cat /run/dnsmasq.pid)" 2>/dev/null; rm -f /run/dnsmasq.pid
+		;;
+	*) echo "usage: $0 {start|stop}"; exit 1 ;;
+esac
